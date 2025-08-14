@@ -1,0 +1,140 @@
+@startuml erd
+
+entity "User" as user {
+  +user_id : int <<PK, NOT NULL, AUTOINCREMENT>>
+  --
+  email : varchar(51) <<NOT NULL, UNIQUE>>
+  created_at : datetime <<NOT NULL, DEFAULT CURRENT_TIMESTAMP>>
+}
+
+entity "User_Profile" as user_profile {
+  +profile_id : int <<PK, NOT NULL, AUTOINCREMENT>>
+  +user_id : int <<FK, NOT NULL UNIQUE>>
+  --
+  first_name : varchar(51) <<NOT NULL>>
+  last_name : varchar(51) <<NOT NULL>>
+  date_of_birth : date <<NOT NULL>>
+  gender : enum('Male', 'Female') <<NOT NULL>>
+  phone_number : varchar(14) <<NOT NULL, UNIQUE>>
+  password : varchar(255) <<NOT NULL>>
+  role : enum('ATTENDEE','EVENT_ORGANIZER') <<NOT NULL, DEFAULT 'ATTENDEE'>>
+  created_at : datetime <<NOT NULL, DEFAULT CURRENT_DATE>>
+  updated_at : datetime <<NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP>>
+}
+
+entity "Event_Category" as event_category {
+  +category_id : int <<PK, NOT NULL, AUTOINCREMENT>>
+  --
+  name : varchar(51) <<NOT NULL, UNIQUE>>
+  created_at : datetime <<NOT NULL, DEFAULT CURRENT_TIMESTAMP>>
+  updated_at : datetime <<NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP>>
+}
+
+entity "Event_Organizer" as event_organizer {
+  +organizer_id : int <<PK, NOT NULL, AUTOINCREMENT>>
+  --
+  name : varchar(127) <<NOT NULL, UNIQUE>>
+  created_at : datetime <<NOT NULL, DEFAULT CURRENT_TIMESTAMP>>
+  updated_at : datetime <<NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP>>
+}
+
+entity "Event_Terms" as event_terms {
+  +term_id : int <<PK, NOT NULL, AUTOINCREMENT>>
+  +event_id : int <<FK, NOT NULL, UNIQUE>>
+  --
+  description : text <<NOT NULL>>
+  created_at : datetime <<DEFAULT CURRENT_TIMESTAMP>>
+  updated_at : datetime <<DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP>>
+}
+
+entity "Event" as event {
+  +event_id : int <<PK, NOT NULL, AUTOINCREMENT>>
+  +category_id : int <<FK, NOT NULL>>
+  +organizer_id : int <<FK, NOT NULL>>
+  --
+  title : varchar(127) <<NOT NULL>>
+  description : text <<NOT NULL>>
+  location : varchar(127) <<NOT NULL>>
+  image_url : varchar(255) <<NOT NULL>>
+  status : enum('active', 'inactive', 'completed') <<NOT NULL, DEFAULT 'active'>>
+  created_at : datetime <<NOT NULL, DEFAULT CURRENT_TIMESTAMP>>
+  updated_at : datetime <<NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP>>
+}
+
+entity "Event_Period" as event_period {
+  +period_id : int <<PK, NOT NULL, AUTOINCREMENT>>
+  +event_id : int <<FK, NOT NULL>>
+  --
+  name : varchar(127) <<NOT NULL>>
+  periode_sequence : int <<NOT NULL>>
+  start_date : date <<NOT NULL>>
+  end_date : date <<NOT NULL>>
+  start_time : time <<NOT NULL>>
+  end_time : time <<NOT NULL>>
+  capacity : int <<NOT NULL>>
+  is_capacity_unlimited : boolean <<NOT NULL, DEFAULT FALSE>>
+  status : enum('upcoming','ongoing','completed') <<NOT NULL, DEFAULT 'upcoming'>>
+  created_at : datetime <<NOT NULL, DEFAULT CURRENT_TIMESTAMP>>
+  updated_at : datetime <<NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP>>
+}
+
+entity "Ticket_Type" as ticket_type {
+  +type_id : int <<PK, NOT NULL, AUTOINCREMENT>>
+  +period_id : int <<FK, NOT NULL>>
+  --
+  name : enum('VIP', 'Reguler', 'Early Bird') <<NOT NULL>>
+  price : decimal(10,2) <<NOT NULL>>
+  discount : decimal(10,2) <<NULL>>
+  quota : int <<NOT NULL>>
+  status : enum('available', 'sold out') <<NOT NULL, DEFAULT 'available'>>
+  created_at : datetime <<NOT NULL, DEFAULT CURRENT_TIMESTAMP>>
+  updated_at : datetime <<NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP>>
+}
+
+entity "Ticket" as ticket {
+  +ticket_id : int <<PK, NOT NULL, AUTOINCREMENT>>
+  +type_id : int <<FK, NOT NULL>>
+  +buyer_id : int <<FK, NULL>>
+  --
+  ticket_code : varchar(51) <<NOT NULL, UNIQUE>>
+  created_at : datetime <<DEFAULT CURRENT_TIMESTAMP>>
+}
+
+user ||--|| user_profile : "has"
+user ||--o{ ticket : "purchases"
+event_category ||--o{ event : "categorizes"
+event_organizer ||--o{ event : "organizes"
+event ||--o{ event_period : "has per day"
+event_period ||--o{ ticket_type : "offers"
+ticket_type ||--o{ ticket : "generates"
+event ||--|| event_terms : "has"
+
+note right of user_profile
+  One-to-one: setiap user hanya punya satu profil
+end note
+
+note right of ticket
+  One-to-many: user bisa membeli banyak tiket
+end note
+
+note right of event_category
+  One-to-many: satu kategori bisa punya banyak event
+end note
+
+note right of event_organizer
+  One-to-many: satu penyelenggara bisa mengorganisir banyak event
+end note
+
+note right of event_period
+  One-to-many: satu event bisa punya beberapa periode/hari
+end note
+
+note right of ticket_type
+  One-to-many: satu periode bisa punya beberapa tipe tiket
+end note
+
+note right of event_terms
+  One-to-one: setiap event punya satu set syarat & ketentuan
+end note
+
+@enduml
