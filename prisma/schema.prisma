@@ -17,13 +17,20 @@ datasource db {
 model User {
   user_id     Int      @id @default(autoincrement())
   email       String   @unique @db.VarChar(51)
+  password    String   @db.VarChar(255)
+  role        Role     @default(ATTENDEE)
   created_at  DateTime @default(now())
 
   profile     UserProfile?
   tickets     Ticket[]
-  organizer   EventOrganizer? // 1 user bisa jadi organizer
+  organizer   EventOrganizer?
 
   @@index([email])
+}
+
+enum Gender {
+  MALE
+  FEMALE
 }
 
 model UserProfile {
@@ -34,17 +41,10 @@ model UserProfile {
   date_of_birth DateTime
   gender        Gender
   phone_number  String   @unique @db.VarChar(14)
-  password      String   @db.VarChar(255)
-  role          Role     @default(ATTENDEE)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
   user          User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-}
-
-enum Gender {
-  MALE
-  FEMALE
 }
 
 enum Role {
