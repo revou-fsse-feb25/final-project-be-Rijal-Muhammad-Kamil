@@ -1,216 +1,191 @@
-import { PrismaClient } from '@prisma/client';
-import { Gender, Role, EventStatus, PeriodStatus, TicketTypeName, TicketTypeStatus } from '@prisma/client';
+import { PrismaClient, Role, Gender, UserStatus, EventStatus, PeriodStatus, TicketStatus } from '@prisma/client';
+import { AttendeeUser, OrganizerUser } from './interface';
+import { faker } from '@faker-js/faker';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Starting database seeding...');
+  console.log('Start seeding...');
 
   // Clear existing data
   await prisma.ticket.deleteMany();
   await prisma.ticketType.deleteMany();
+  await prisma.ticketTypeCategory.deleteMany();
   await prisma.eventPeriod.deleteMany();
-  await prisma.eventTerms.deleteMany();
   await prisma.event.deleteMany();
   await prisma.eventCategory.deleteMany();
   await prisma.eventOrganizer.deleteMany();
-  await prisma.userProfile.deleteMany();
   await prisma.user.deleteMany();
 
-  console.log('Cleared existing data');
+  // Ticket type categories
+  const ticketTypeCategories = await Promise.all(
+    ['Regular', 'VIP', 'VVIP', 'Early Bird', 'Student'].map(name =>
+      prisma.ticketTypeCategory.create({ data: { name } })
+    )
+  );
 
-  // Create Event Categories
-  const categories = await Promise.all([
-    prisma.eventCategory.create({
-      data: {
-        name: 'Konser Musik',
-      },
-    }),
-    prisma.eventCategory.create({
-      data: {
-        name: 'Seminar & Workshop',
-      },
-    }),
-    prisma.eventCategory.create({
-      data: {
-        name: 'Olahraga',
-      },
-    }),
-    prisma.eventCategory.create({
-      data: {
-        name: 'Festival',
-      },
-    }),
-    prisma.eventCategory.create({
-      data: {
-        name: 'Pameran',
-      },
-    }),
-  ]);
+  // Event categories
+  const eventCategories = await Promise.all(
+    ['Music', 'Sports', 'Arts', 'Technology', 'Business', 'Food', 'Education', 'Health', 'Exhibition'].map(name =>
+      prisma.eventCategory.create({ data: { name } })
+    )
+  );
 
-  console.log('Created event categories');
+  // Create 2 attendees
+  const attendeeUsers: AttendeeUser[] = [];
+  for (let i = 0; i < 2; i++) {
+    const firstName = faker.person.firstName();
+    const lastName = faker.person.lastName();
+    const gender = faker.helpers.arrayElement(['Male', 'Female']) as Gender;
+    const hashedPassword = await bcrypt.hash('password123', 10);
 
-  // Create 1 ATTENDEE user
-  const attendeeUser = await prisma.user.create({
-    data: {
-      email: 'attendee@example.com',
-      profile: {
-        create: {
-          first_name: 'John',
-          last_name: 'Doe',
-          date_of_birth: new Date('1990-01-15'),
-          gender: Gender.MALE,
-          phone_number: '+628123456789',
-          password: await bcrypt.hash('password123', 10),
-          role: Role.ATTENDEE,
-        },
-      },
-    },
-  });
-
-  console.log('Created attendee user');
-
-  // Create 10 EVENT_ORGANIZER users with events
-  for (let i = 1; i <= 10; i++) {
-    const organizerUser = await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
-        email: `organizer${i}@example.com`,
-        profile: {
-          create: {
-            first_name: `Organizer`,
-            last_name: `Ke ${i}`,
-            date_of_birth: new Date(`198${i % 10}-0${(i % 9) + 1}-${10 + i}`),
-            gender: i % 2 === 0 ? Gender.FEMALE : Gender.MALE,
-            phone_number: `+62812345678${i.toString().padStart(2, '0')}`,
-            password: await bcrypt.hash(`organizer${i}password`, 10),
-            role: Role.EVENT_ORGANIZER,
-          },
-        },
-        organizer: {
-          create: {
-            name: `Event Organizer ${i}`,
-          },
-        },
-      },
-      include: {
-        organizer: true,
+        email: faker.internet.email({ firstName, lastName }),
+        password: hashedPassword,
+        role: Role.ATTENDEE,
+        first_name: firstName,
+        last_name: lastName,
+        date_of_birth: faker.date.birthdate({ min: 18, max: 65, mode: 'age' }),
+        gender,
+        phone_number: `08${faker.string.numeric(10)}`,
+        status: UserStatus.ACTIVE,
+        created_at: new Date(),
+        updated_at: new Date(),
       },
     });
 
-    // Create 3 events for each organizer
-    for (let j = 1; j <= 3; j++) {
-      const eventIndex = (i - 1) * 3 + j;
-      const categoryIndex = (eventIndex - 1) % categories.length;
-      
+    attendeeUsers.push(user);
+  }
+
+  // Create 10 organizers
+  const organizerUsers: OrganizerUser[] = [];
+  for (let i = 0; i < 10; i++) {
+    const firstName = faker.person.firstName();
+    const lastName = faker.person.lastName();
+    const gender = faker.helpers.arrayElement(['Male', 'Female']) as Gender;
+    const hashedPassword = await bcrypt.hash('password123', 10);
+
+    const user = await prisma.user.create({
+      data: {
+        email: faker.internet.email({ firstName, lastName }),
+        password: hashedPassword,
+        role: Role.EVENT_ORGANIZER,
+        first_name: firstName,
+        last_name: lastName,
+        date_of_birth: faker.date.birthdate({ min: 18, max: 65, mode: 'age' }),
+        gender,
+        phone_number: `08${faker.string.numeric(10)}`,
+        status: UserStatus.ACTIVE,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+    });
+
+    const organizer = await prisma.eventOrganizer.create({
+      data: {
+        user_id: user.user_id,
+        name: `${firstName} ${lastName} Events`,
+        image_url: faker.image.urlLoremFlickr({ category: 'business' }) ?? 'https://via.placeholder.com/150',
+      },
+    });
+
+    organizerUsers.push({ user, organizer });
+  }
+
+  // Create 5 events per organizer
+  for (const { organizer } of organizerUsers) {
+    for (let i = 0; i < 5; i++) {
+      const eventCategory = faker.helpers.arrayElement(eventCategories);
+
       const event = await prisma.event.create({
         data: {
-          category_id: categories[categoryIndex].category_id,
-          organizer_id: organizerUser.organizer!.organizer_id,
-          title: `Event ${eventIndex} - ${categories[categoryIndex].name}`,
-          description: `Deskripsi lengkap untuk Event ${eventIndex}. Event ini akan memberikan pengalaman yang tak terlupakan bagi semua peserta. Dengan berbagai aktivitas menarik dan pembicara berkualitas.`,
-          location: `Venue ${eventIndex}, Jakarta`,
-          image_url: `https://example.com/images/event${eventIndex}.jpg`,
-          status: EventStatus.ACTIVE,
+          category_id: eventCategory.category_id,
+          organizer_id: organizer.organizer_id,
+          title: faker.company.catchPhrase(),
+          description: faker.lorem.paragraphs(3),
+          terms: faker.lorem.paragraphs(2),
+          location: faker.location.city(),
+          image_url: faker.image.urlLoremFlickr({ category: 'event' }) ?? 'https://via.placeholder.com/150',
+          status: EventStatus.active,
+          created_at: new Date(),
+          updated_at: new Date(),
         },
       });
 
-      // Create Event Terms
-      await prisma.eventTerms.create({
-        data: {
-          event_id: event.event_id,
-          description: `Syarat dan ketentuan untuk Event ${eventIndex}:\n1. Peserta wajib membawa identitas diri\n2. Dilarang membawa makanan dan minuman dari luar\n3. Peserta wajib mematuhi protokol kesehatan\n4. Tiket tidak dapat dikembalikan\n5. Panitia berhak menolak peserta yang tidak memenuhi syarat`,
-        },
-      });
-
-      // Create 2 Event Periods for each event
-      for (let k = 1; k <= 2; k++) {
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() + (eventIndex * 7) + (k * 2));
+      // 2 periods per event
+      for (let j = 0; j < 2; j++) {
+        const startDate = faker.date.future({ years: 1 });
         const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 1);
+        endDate.setDate(endDate.getDate() + faker.number.int({ min: 1, max: 3 }));
+
+        const startTime = new Date();
+        startTime.setHours(faker.number.int({ min: 8, max: 18 }), 0, 0, 0);
+        const endTime = new Date(startTime);
+        endTime.setHours(endTime.getHours() + faker.number.int({ min: 2, max: 6 }));
 
         const period = await prisma.eventPeriod.create({
           data: {
             event_id: event.event_id,
-            name: `Periode ${k}`,
-            period_sequence: k,
+            name: `Period ${j + 1}`,
             start_date: startDate,
             end_date: endDate,
-            start_time: new Date(`1970-01-01T${k === 1 ? '09:00:00' : '14:00:00'}.000Z`),
-            end_time: new Date(`1970-01-01T${k === 1 ? '12:00:00' : '17:00:00'}.000Z`),
-            capacity: 500 + (k * 100),
-            status: PeriodStatus.UPCOMING,
+            start_time: startTime,
+            end_time: endTime,
+            status: PeriodStatus.upcoming,
+            created_at: new Date(),
+            updated_at: new Date(),
           },
         });
 
-        // Create 3 Ticket Types for each period
-        const ticketTypes = [
-          {
-            name: TicketTypeName.EARLY_BIRD,
-            price: 50000 + (eventIndex * 10000),
-            discount: 20.00,
-            quota: 50,
-          },
-          {
-            name: TicketTypeName.REGULAR,
-            price: 75000 + (eventIndex * 10000),
-            discount: 0.00,
-            quota: 300,
-          },
-          {
-            name: TicketTypeName.VIP,
-            price: 150000 + (eventIndex * 10000),
-            discount: 0.00,
-            quota: 100,
-          },
-        ];
+        // 2 ticket types per period
+        for (let k = 0; k < 2; k++) {
+          const ticketCategory = faker.helpers.arrayElement(ticketTypeCategories);
+          const price = faker.number.float({ min: 50000, max: 1000000, fractionDigits: 2 });
+          const hasDiscount = faker.datatype.boolean();
+          const discount = hasDiscount ? price * faker.number.float({ min: 0.1, max: 0.5, fractionDigits: 2 }) : null;
 
-        for (const ticketTypeData of ticketTypes) {
           const ticketType = await prisma.ticketType.create({
             data: {
               period_id: period.period_id,
-              name: ticketTypeData.name,
-              price: ticketTypeData.price,
-              discount: ticketTypeData.discount,
-              quota: ticketTypeData.quota,
-              status: TicketTypeStatus.AVAILABLE,
+              category_id: ticketCategory.category_id,
+              price,
+              discount,
+              quota: faker.number.int({ min: 50, max: 500 }),
+              status: TicketStatus.available,
+              created_at: new Date(),
+              updated_at: new Date(),
             },
           });
 
-          // Create some tickets for each ticket type
-          const ticketCount = Math.floor(ticketTypeData.quota * 0.3); // 30% of quota
-          for (let l = 1; l <= ticketCount; l++) {
+          // Tickets purchased by attendees (0-2 per ticket type)
+          const purchaseCount = faker.number.int({ min: 0, max: 2 });
+          for (let t = 0; t < purchaseCount; t++) {
+            const attendee = faker.helpers.arrayElement(attendeeUsers);
             await prisma.ticket.create({
               data: {
                 type_id: ticketType.type_id,
-                buyer_id: Math.random() > 0.7 ? attendeeUser.user_id : null, // 30% chance to be bought by attendee
-                ticket_code: `TKT-${event.event_id}-${period.period_id}-${ticketType.type_id}-${l.toString().padStart(3, '0')}`,
+                buyer_id: attendee.user_id,
+                ticket_code: faker.string.alphanumeric(10).toUpperCase(),
+                created_at: new Date(),
               },
             });
           }
         }
       }
     }
-
-    console.log(`Created organizer ${i} with 3 events`);
   }
 
-  console.log('Database seeding completed successfully!');
-  console.log('Summary:');
-  console.log('- 11 users (1 attendee + 10 organizers)');
-  console.log('- 5 event categories');
-  console.log('- 30 events (3 per organizer)');
-  console.log('- 60 event periods (2 per event)');
-  console.log('- 180 ticket types (3 per period)');
-  console.log('- ~1620 tickets (30% of total quota)');
+  console.log('Seeding finished.');
 }
 
 main()
-  .catch((e) => {
-    console.error('Error during seeding:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
+  .then(async () => {
     await prisma.$disconnect();
+  })
+  .catch(async e => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
   });

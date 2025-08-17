@@ -15,168 +15,153 @@ datasource db {
 }
 
 model User {
-  user_id     Int      @id @default(autoincrement())
-  email       String   @unique @db.VarChar(51)
-  password    String   @db.VarChar(255)
-  role        Role     @default(ATTENDEE)
-  created_at  DateTime @default(now())
-
-  profile     UserProfile?
-  tickets     Ticket[]
-  organizer   EventOrganizer?
-
-  @@index([email])
-}
-
-enum Gender {
-  MALE
-  FEMALE
-}
-
-model UserProfile {
-  profile_id    Int      @id @default(autoincrement())
-  user_id       Int      @unique
-  first_name    String   @db.VarChar(51)
-  last_name     String   @db.VarChar(51)
-  date_of_birth DateTime
+  user_id       Int          @id @default(autoincrement())
+  email         String       @unique @db.VarChar(51)
+  password      String       @db.VarChar(255)
+  role          Role         @default(ATTENDEE)
+  first_name    String       @db.VarChar(51)
+  last_name     String       @db.VarChar(51)
+  date_of_birth DateTime     @db.Date
   gender        Gender
-  phone_number  String   @unique @db.VarChar(14)
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  phone_number  String       @unique @db.VarChar(14)
+  status        UserStatus   @default(ACTIVE)
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
 
-  user          User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-}
-
-enum Role {
-  ATTENDEE
-  EVENT_ORGANIZER
+  // Relations
+  tickets        Ticket[]
+  eventOrganizer EventOrganizer?
 }
 
 model EventOrganizer {
-  organizer_id Int      @id @default(autoincrement())
-  user_id      Int      @unique // 1 organizer = 1 user
-  name         String   @db.VarChar(127)
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  organizer_id Int       @id @default(autoincrement())
+  user_id      Int       @unique
+  name         String    @unique @db.VarChar(127)
+  image_url    String?   @db.VarChar(255)
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
 
-  user         User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  events       Event[]
+  // Relations
+  user   User    @relation(fields: [user_id], references: [user_id])
+  events Event[]
 }
 
 model EventCategory {
-  category_id Int      @id @default(autoincrement())
-  name        String   @unique @db.VarChar(127)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  category_id Int       @id @default(autoincrement())
+  name        String    @unique @db.VarChar(51)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
 
-  events      Event[]
-}
-
-model EventTerms {
-  term_id     Int      @id @default(autoincrement())
-  event_id    Int      @unique
-  description String   @db.Text
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  event       Event    @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+  // Relations
+  events Event[]
 }
 
 model Event {
-  event_id      Int         @id @default(autoincrement())
-  category_id   Int
-  organizer_id  Int
-  title         String      @db.VarChar(127)
-  description   String      @db.Text
-  location      String      @db.VarChar(127)
-  image_url     String      @db.VarChar(255)
-  status        EventStatus @default(ACTIVE)
-  is_deleted    Boolean     @default(false)
-  created_at    DateTime    @default(now())
-  updated_at    DateTime    @updatedAt
+  event_id     Int         @id @default(autoincrement())
+  category_id  Int
+  organizer_id Int
+  title        String      @db.VarChar(127)
+  description  String
+  terms        String
+  location     String      @db.VarChar(127)
+  image_url    String      @db.VarChar(255)
+  status       EventStatus @default(active)
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
 
-  category      EventCategory  @relation(fields: [category_id], references: [category_id])
-  organizer     EventOrganizer @relation(fields: [organizer_id], references: [organizer_id])
-  periods       EventPeriod[]
-  terms         EventTerms?
-
-  @@index([category_id])
-  @@index([organizer_id])
-}
-
-enum EventStatus {
-  ACTIVE
-  INACTIVE
-  COMPLETED
+  // Relations
+  category EventCategory     @relation(fields: [category_id], references: [category_id])
+  organizer EventOrganizer   @relation(fields: [organizer_id], references: [organizer_id])
+  periods   EventPeriod[]
 }
 
 model EventPeriod {
-  period_id         Int      @id @default(autoincrement())
-  event_id          Int
-  name              String   @db.VarChar(127)
-  period_sequence   Int
-  start_date        DateTime @db.Date
-  end_date          DateTime @db.Date
-  start_time        DateTime @db.Time
-  end_time          DateTime @db.Time
-  capacity          Int
-  status            PeriodStatus @default(UPCOMING)
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  period_id  Int          @id @default(autoincrement())
+  event_id   Int
+  name       String       @db.VarChar(127)
+  start_date DateTime      @db.Date
+  end_date   DateTime      @db.Date
+  start_time DateTime      @db.Time
+  end_time   DateTime      @db.Time
+  status     PeriodStatus @default(upcoming)
+  created_at DateTime     @default(now())
+  updated_at DateTime     @updatedAt
 
-  event             Event    @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
-  ticketTypes       TicketType[]
-
-  @@index([event_id])
-  @@index([status])
+  // Relations
+  event       Event        @relation(fields: [event_id], references: [event_id])
+  ticketTypes TicketType[]
 }
 
-enum PeriodStatus {
-  UPCOMING
-  ONGOING
-  COMPLETED
+model TicketTypeCategory {
+  category_id Int          @id @default(autoincrement())
+  name        String       @unique @db.VarChar(51)
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+
+  // Relations
+  ticketTypes TicketType[]
 }
 
 model TicketType {
-  type_id    Int      @id @default(autoincrement())
-  period_id  Int
-  name       TicketTypeName
-  price      Decimal   @db.Decimal(10, 2)
-  discount   Decimal   @db.Decimal(10, 2) @default(0.00)
-  quota      Int
-  status     TicketTypeStatus @default(AVAILABLE)
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
+  type_id     Int          @id @default(autoincrement())
+  period_id   Int
+  category_id Int
+  price       Decimal      @db.Decimal(10, 2)
+  discount    Decimal?     @db.Decimal(10, 2)
+  quota       Int
+  status      TicketStatus @default(available)
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
 
-  period     EventPeriod @relation(fields: [period_id], references: [period_id], onDelete: Cascade)
-  tickets    Ticket[]
-
-  @@index([period_id])
-  @@index([status])
-}
-
-enum TicketTypeName {
-  VIP
-  REGULAR
-  EARLY_BIRD
-}
-
-enum TicketTypeStatus {
-  AVAILABLE
-  SOLD_OUT
+  // Relations
+  period   EventPeriod        @relation(fields: [period_id], references: [period_id])
+  category TicketTypeCategory @relation(fields: [category_id], references: [category_id])
+  tickets  Ticket[]
 }
 
 model Ticket {
-  ticket_id   Int      @id @default(autoincrement())
+  ticket_id   Int       @id @default(autoincrement())
   type_id     Int
   buyer_id    Int?
-  ticket_code String   @unique @db.VarChar(51)
-  is_deleted  Boolean  @default(false)
-  created_at  DateTime @default(now())
+  ticket_code String    @unique @db.VarChar(51)
+  created_at  DateTime  @default(now())
 
-  type        TicketType @relation(fields: [type_id], references: [type_id], onDelete: Cascade)
-  buyer       User?      @relation(fields: [buyer_id], references: [user_id])
+  // Relations
+  type  TicketType @relation(fields: [type_id], references: [type_id])
+  buyer User?      @relation(fields: [buyer_id], references: [user_id])
+}
 
-  @@index([type_id])
-  @@index([buyer_id])
+// Enums
+enum Role {
+  ATTENDEE
+  EVENT_ORGANIZER
+  ADMIN
+}
+
+enum Gender {
+  Male
+  Female
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum EventStatus {
+  active
+  inactive
+  completed
+}
+
+enum PeriodStatus {
+  upcoming
+  ongoing
+  completed
+}
+
+enum TicketStatus {
+  available
+  sold_out
 }
