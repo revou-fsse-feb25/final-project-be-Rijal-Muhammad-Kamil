@@ -3,12 +3,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { IUserRepository } from '../repository/repository.interface';
 import { CreateUserDTO } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import { Role, User } from '@prisma/client';
+import { CreateEventOrganizerDto } from '../dto/create-event-organizer.dto';
+import { UpdateEventOrganizerDto } from '../dto/update-event-organizer.dto';
+import { Role, User, EventOrganizer } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { InternalServerErrorException, ConflictException, NotFoundException } from '@nestjs/common';
 
 @Injectable()
-export class UserRepository implements IUserRepository {
+export class UserRepository {
   constructor(private prisma: PrismaService) {}
 
   private async hashPassword(password: string): Promise<string> {
@@ -63,10 +65,10 @@ export class UserRepository implements IUserRepository {
     }
   }
 
-  async updateUser(updateUserDTO: UpdateUserDto & { user_id: number }): Promise<User> {
-    const { user_id, ...data } = updateUserDTO;
+  async updateUser(user_id: number, updateUserDTO: UpdateUserDto): Promise<User> {
+    const data = { ...updateUserDTO };
 
-    if ('password' in data && data.password) {
+    if (data.password) {
       data.password = await this.hashPassword(data.password);
     }
 
@@ -92,6 +94,80 @@ export class UserRepository implements IUserRepository {
     } catch (error: any) {
       if (error.code === 'P2025') {
         throw new NotFoundException(`User with ID ${user_id} not found`);
+      }
+      throw new InternalServerErrorException(error.message);
+    }
+  }
+
+  async createEventOrganizer(createEventOrganizerDto: CreateEventOrganizerDto, user_id: number): Promise<EventOrganizer> {
+    try {
+      return await this.prisma.eventOrganizer.create({
+        data: {
+          ...createEventOrganizerDto,
+          user: {
+            connect: {
+              user_id: user_id,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new ConflictException('Event organizer name already exists');
+      }
+      throw new InternalServerErrorException(error.message);
+    }
+  }
+
+  async findEventOrganizerById(organizer_id: number): Promise<EventOrganizer> {
+    try {
+      const organizer = await this.prisma.eventOrganizer.findUnique({
+        where: { organizer_id },
+      });
+
+      if (!organizer) {
+        throw new NotFoundException('Event organizer not found');
+      }
+
+      return organizer;
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException(error.message);
+    }
+  }
+
+  async findEventOrganizerByUserId(user_id: number): Promise<EventOrganizer | null> {
+    try {
+      const organizer = await this.prisma.eventOrganizer.findUnique({
+        where: { user_id },
+      });
+
+      return organizer;
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
+    }
+  }
+
+  async findAllEventOrganizer(): Promise<EventOrganizer[]> {
+    try {
+      return this.prisma.eventOrganizer.findMany({ orderBy: { organizer_id: 'asc' } });
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
+    }
+  }
+
+  async updateEventOrganizer(updateEventOrganizerDto: UpdateEventOrganizerDto, organizer_id: number): Promise<EventOrganizer> {
+    try {
+      return await this.prisma.eventOrganizer.update({
+        where: { organizer_id },
+        data: updateEventOrganizerDto,
+      });
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException('Event organizer not found');
+      }
+      if (error.code === 'P2002') {
+        throw new ConflictException('Event organizer name already exists');
       }
       throw new InternalServerErrorException(error.message);
     }
