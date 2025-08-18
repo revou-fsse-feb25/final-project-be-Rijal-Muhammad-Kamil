@@ -17,7 +17,7 @@ export class CreateUserDTO {
   @IsString()
   @ApiProperty({
     example: 'password123',
-    description: 'The password for the user account, minimum 9 characters recommended.',
+    description: 'The password for the user account.',
   })
   password: string;
 
@@ -60,11 +60,7 @@ export class CreateUserDTO {
 
   @IsNotEmpty()
   @IsEnum(Role)
-  @ApiProperty({
-    example: 'ATTENDEE',
-    required: false,
-    description: 'Role of the user, default is ATTENDEE if not provided.',
-  })
+  @ApiProperty({ example: 'ATTENDEE', description: 'Role of the user, default is ATTENDEE if not provided.' })
   role: Role;
 
   @IsNotEmpty()

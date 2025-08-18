@@ -14,20 +14,9 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Login successful, returns access token and user info',
-    schema: {
-      example: {
-        message: 'Login successful',
-        accessToken: 'jwt_token_here',
-        user: {
-          userId: 1,
-          email: 'user@example.com',
-          role: 'ATTENDEE',
-        },
-      },
-    },
+    type: LoginUserDTO,
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
   async login(@Body() loginUserDTO: LoginUserDTO) {
     return this.authService.login(loginUserDTO);
   }
