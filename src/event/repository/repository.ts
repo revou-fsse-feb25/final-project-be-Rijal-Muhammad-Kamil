@@ -1,41 +1,92 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { Prisma, EventStatus } from '@prisma/client';
+import { IEventRepository } from './repository.interface';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Event, EventPeriod } from '@prisma/client';
-import { CreateEventDTO } from '../dto/create-event.dto';
-import { UpdateEventDto } from '../dto/update-event.dto';
-import { CreateEventPeriodDTO } from '../dto/create-event-period.dto';
+import { InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { CreateEventDTO } from '../dto/event/create-event.dto';
+import { UpdateEventDto } from '../dto/event/update-event.dto';
+import { SearchEventDto } from '../dto/event/search-event.dto';
+
+type EventWithRelations = Prisma.EventGetPayload<{
+  include: {
+    category: true;
+    organizer: {
+      include: {
+        user: true;
+      };
+    };
+    periods: {
+      include: {
+        ticketTypes: {
+          include: {
+            category: true;
+          };
+        };
+      };
+    };
+  };
+}>;
 
 @Injectable()
-export class EventRepository {
-  constructor(private readonly prisma: PrismaService) {}
+export class EventRepository implements IEventRepository {
+  constructor(private prisma: PrismaService) {}
 
-  async createEvent(createEventDto: CreateEventDTO, organizerId: number): Promise<Event> {
+  async createEvent(createEventDTO: CreateEventDTO, organizerId: number): Promise<EventWithRelations> {
     try {
-      return await this.prisma.event.create({
+      const event = await this.prisma.event.create({
         data: {
-          title: createEventDto.title,
-          description: createEventDto.description,
-          terms: createEventDto.terms,
-          location: createEventDto.location,
-          image_url: createEventDto.image_url,
-          status: createEventDto.status ?? 'active',
-          organizer: { connect: { organizer_id: organizerId } },
-          category: { connect: { category_id: createEventDto.category_id } },
+          ...createEventDTO,
+          organizer_id: organizerId,
+        },
+        include: {
+          category: true,
+          organizer: {
+            include: {
+              user: true,
+            },
+          },
+          periods: {
+            include: {
+              ticketTypes: {
+                include: {
+                  category: true,
+                },
+              },
+            },
+          },
         },
       });
-    } catch (error) {
+      return event;
+    } catch (error: any) {
       throw new InternalServerErrorException(error.message);
     }
   }
 
-  async findEventById(eventId: number): Promise<Event> {
+  async findEventById(eventId: number): Promise<EventWithRelations> {
     try {
       const event = await this.prisma.event.findUnique({
         where: { event_id: eventId },
-        include: { organizer: true, category: true },
+        include: {
+          category: true,
+          organizer: {
+            include: {
+              user: true,
+            },
+          },
+          periods: {
+            include: {
+              ticketTypes: {
+                include: {
+                  category: true,
+                },
+              },
+            },
+          },
+        },
       });
-
-      if (!event) throw new NotFoundException(`Event with ID ${eventId} not found`);
+      if (!event) {
+        throw new NotFoundException(`Event with ID ${eventId} not found`);
+      }
       return event;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
@@ -43,102 +94,222 @@ export class EventRepository {
     }
   }
 
-  async findAllEvents(): Promise<Event[]> {
+  async findEventsByOrganizerId(organizerId: number): Promise<EventWithRelations[]> {
     try {
-      return await this.prisma.event.findMany({
-        include: { organizer: true, category: true },
+      const events = await this.prisma.event.findMany({
+        where: { organizer_id: organizerId },
+        include: {
+          category: true,
+          organizer: {
+            include: {
+              user: true,
+            },
+          },
+          periods: {
+            include: {
+              ticketTypes: {
+                include: {
+                  category: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          created_at: 'desc',
+        },
       });
-    } catch (error) {
+      return events;
+    } catch (error: any) {
       throw new InternalServerErrorException(error.message);
     }
   }
 
-  async updateEvent(eventId: number, updateEventDto: UpdateEventDto): Promise<Event> {
+  async findAllEvents(): Promise<EventWithRelations[]> {
     try {
-      const existingEvent = await this.prisma.event.findUnique({ where: { event_id: eventId } });
-      if (!existingEvent) throw new NotFoundException(`Event with ID ${eventId} not found`);
+      const events = await this.prisma.event.findMany({
+        include: {
+          category: true,
+          organizer: {
+            include: {
+              user: true,
+            },
+          },
+          periods: {
+            include: {
+              ticketTypes: {
+                include: {
+                  category: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          created_at: 'desc',
+        },
+      });
+      return events;
+    } catch (error: any) {
+      throw new InternalServerErrorException(error.message);
+    }
+  }
 
-      return await this.prisma.event.update({
+  async updateEvent(eventId: number, updateEventDto: UpdateEventDto): Promise<EventWithRelations> {
+    try {
+      const updatedEvent = await this.prisma.event.update({
         where: { event_id: eventId },
-        data: {
-          title: updateEventDto.title,
-          description: updateEventDto.description,
-          terms: updateEventDto.terms,
-          location: updateEventDto.location,
-          image_url: updateEventDto.image_url,
-          status: updateEventDto.status,
-          ...(updateEventDto.category_id ? { category: { connect: { category_id: updateEventDto.category_id } } } : {}),
+        data: updateEventDto,
+        include: {
+          category: true,
+          organizer: {
+            include: {
+              user: true,
+            },
+          },
+          periods: {
+            include: {
+              ticketTypes: {
+                include: {
+                  category: true,
+                },
+              },
+            },
+          },
         },
       });
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
+      return updatedEvent;
+    } catch (error: any) {
       throw new InternalServerErrorException(error.message);
     }
   }
 
-  async deleteEvent(eventId: number): Promise<Event> {
+  async deleteEvent(eventId: number): Promise<EventWithRelations> {
     try {
-      const existingEvent = await this.prisma.event.findUnique({ where: { event_id: eventId } });
-      if (!existingEvent) throw new NotFoundException(`Event with ID ${eventId} not found`);
-
-      return await this.prisma.event.delete({ where: { event_id: eventId } });
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(error.message);
-    }
-  }
-
-  async updateEventPeriod(periodId: number, dto: CreateEventPeriodDTO): Promise<EventPeriod> {
-    try {
-      const existing = await this.prisma.eventPeriod.findUnique({ where: { period_id: periodId } });
-      if (!existing) throw new NotFoundException(`EventPeriod with ID ${periodId} not found`);
-
-      return await this.prisma.eventPeriod.update({
-        where: { period_id: periodId },
-        data: {
-          name: dto.name,
-          start_date: new Date(dto.start_date),
-          end_date: new Date(dto.end_date),
-          start_time: dto.start_time,
-          end_time: dto.end_time,
-          status: dto.status ?? existing.status,
+      const deletedEvent = await this.prisma.event.delete({
+        where: { event_id: eventId },
+        include: {
+          category: true,
+          organizer: {
+            include: {
+              user: true,
+            },
+          },
+          periods: {
+            include: {
+              ticketTypes: {
+                include: {
+                  category: true,
+                },
+              },
+            },
+          },
         },
       });
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
+      return deletedEvent;
+    } catch (error: any) {
       throw new InternalServerErrorException(error.message);
     }
   }
 
-  async findEventPeriodById(periodId: number): Promise<EventPeriod> {
+  async checkEventOwnership(eventId: number, userId: number): Promise<boolean> {
     try {
-      const period = await this.prisma.eventPeriod.findUnique({
-        where: { period_id: periodId },
+      const event = await this.prisma.event.findUnique({
+        where: { event_id: eventId },
+        include: {
+          organizer: true,
+        },
       });
-      if (!period) throw new NotFoundException(`EventPeriod with ID ${periodId} not found`);
-      return period;
+
+      if (!event) {
+        throw new NotFoundException(`Event with ID ${eventId} not found`);
+      }
+
+      return event.organizer?.user_id === userId;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       throw new InternalServerErrorException(error.message);
     }
   }
 
-  async findAllEventPeriods(eventId: number): Promise<EventPeriod[]> {
+  async searchEvents(searchDto: SearchEventDto): Promise<{ events: EventWithRelations[]; total: number; page: number; limit: number }> {
     try {
-      return await this.prisma.eventPeriod.findMany({ where: { event_id: eventId } });
-    } catch (error) {
-      throw new InternalServerErrorException(error.message);
-    }
-  }
+      const { category_id, location, start_date, search, page = 1, limit = 10 } = searchDto;
+      const skip = (page - 1) * limit;
 
-  async deleteEventPeriod(periodId: number): Promise<EventPeriod> {
-    try {
-      const existing = await this.prisma.eventPeriod.findUnique({ where: { period_id: periodId } });
-      if (!existing) throw new NotFoundException(`EventPeriod with ID ${periodId} not found`);
+      const whereClause: Prisma.EventWhereInput = {
+        status: EventStatus.ACTIVE,
+        ...(category_id && { category_id }),
+        ...(location && {
+          location: {
+            contains: location,
+            mode: 'insensitive',
+          },
+        }),
+        ...(search && {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+            {
+              description: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          ],
+        }),
+        ...(start_date && {
+          periods: {
+            some: {
+              start_date: {
+                gte: new Date(start_date),
+              },
+            },
+          },
+        }),
+      };
 
-      return await this.prisma.eventPeriod.delete({ where: { period_id: periodId } });
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
+      const total = await this.prisma.event.count({
+        where: whereClause,
+      });
+
+      const events = await this.prisma.event.findMany({
+        where: whereClause,
+        include: {
+          category: true,
+          organizer: {
+            include: {
+              user: true,
+            },
+          },
+          periods: {
+            include: {
+              ticketTypes: {
+                include: {
+                  category: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          created_at: 'desc',
+        },
+        skip,
+        take: limit,
+      });
+
+      return {
+        events,
+        total,
+        page,
+        limit,
+      };
+    } catch (error: any) {
       throw new InternalServerErrorException(error.message);
     }
   }

@@ -1,47 +1,111 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EventRepository } from './repository/repository';
-import { CreateEventDTO } from './dto/create-event.dto';
-import { UpdateEventDto } from './dto/update-event.dto';
-import { Event, Role } from '@prisma/client';
+import { UserRepository } from 'src/user/repository/reposityry';
+import { CreateEventDTO } from './dto/event/create-event.dto';
+import { UpdateEventDto } from './dto/event/update-event.dto';
+import { SearchEventDto } from './dto/event/search-event.dto';
+import { Role, Prisma } from '@prisma/client';
+
+type EventWithRelations = Prisma.EventGetPayload<{
+  include: {
+    category: true;
+    organizer: {
+      include: {
+        user: true;
+      };
+    };
+    periods: {
+      include: {
+        ticketTypes: {
+          include: {
+            category: true;
+          };
+        };
+      };
+    };
+  };
+}>;
 
 @Injectable()
 export class EventService {
-  constructor(private readonly eventRepository: EventRepository) {}
+  constructor(
+    private readonly eventRepository: EventRepository,
+    private readonly userRepository: UserRepository,
+  ) {}
 
-  async createEvent(createEventDto: CreateEventDTO, currentUser: { userId: number; role: Role; organizerId?: number }): Promise<Event> {
-    if (!currentUser.organizerId && currentUser.role !== 'ADMIN') {
-      throw new ForbiddenException('You are not allowed to create an event');
+  async createEvent(createEventDTO: CreateEventDTO, currentUser: { userId: number; role: Role }): Promise<EventWithRelations> {
+    if (currentUser.role !== Role.EVENT_ORGANIZER) {
+      throw new ForbiddenException('Only event organizers can create events');
     }
 
-    const organizerId = currentUser.organizerId!;
-    return this.eventRepository.createEvent(createEventDto, organizerId);
+    const eventOrganizer = await this.userRepository.findEventOrganizerByUserId(currentUser.userId);
+    if (!eventOrganizer) {
+      throw new ForbiddenException('You must be registered as an event organizer to create events');
+    }
+
+    return this.eventRepository.createEvent(createEventDTO, eventOrganizer.organizer_id);
   }
 
-  async findEventById(eventId: number): Promise<Event> {
+  async findEventById(eventId: number): Promise<EventWithRelations> {
     return this.eventRepository.findEventById(eventId);
   }
 
-  async findAllEvents(): Promise<Event[]> {
+  async findMyEvents(currentUser: { userId: number; role: Role }): Promise<EventWithRelations[]> {
+    if (currentUser.role !== Role.EVENT_ORGANIZER) {
+      throw new ForbiddenException('Only event organizers can view their events');
+    }
+
+    const eventOrganizer = await this.userRepository.findEventOrganizerByUserId(currentUser.userId);
+    if (!eventOrganizer) {
+      throw new ForbiddenException('You must be registered as an event organizer');
+    }
+
+    return this.eventRepository.findEventsByOrganizerId(eventOrganizer.organizer_id);
+  }
+
+  async findAllEvents(currentUser: { userId: number; role: Role }): Promise<EventWithRelations[]> {
+    if (currentUser.role !== Role.ADMIN) {
+      throw new ForbiddenException('Only admins can view all events');
+    }
+
     return this.eventRepository.findAllEvents();
   }
 
-  async updateEvent(eventId: number, updateEventDto: UpdateEventDto, currentUser: { userId: number; role: Role; organizerId?: number }): Promise<Event> {
-    const event = await this.eventRepository.findEventById(eventId);
-
-    if (currentUser.role !== 'ADMIN' && event.organizer_id !== currentUser.organizerId) {
-      throw new ForbiddenException('You are not allowed to update this event');
+  async updateEvent(eventId: number, updateEventDto: UpdateEventDto, currentUser: { userId: number; role: Role }): Promise<EventWithRelations> {
+    if (currentUser.role === Role.EVENT_ORGANIZER) {
+      const isOwner = await this.eventRepository.checkEventOwnership(eventId, currentUser.userId);
+      if (!isOwner) {
+        throw new ForbiddenException('You can only update your own events');
+      }
+    } else if (currentUser.role !== Role.ADMIN) {
+      throw new ForbiddenException('Only event organizers and admins can update events');
     }
 
     return this.eventRepository.updateEvent(eventId, updateEventDto);
   }
 
-  async deleteEvent(eventId: number, currentUser: { userId: number; role: Role; organizerId?: number }): Promise<Event> {
-    const event = await this.eventRepository.findEventById(eventId);
-
-    if (currentUser.role !== 'ADMIN' && event.organizer_id !== currentUser.organizerId) {
-      throw new ForbiddenException('You are not allowed to delete this event');
+  async deleteEvent(eventId: number, currentUser: { userId: number; role: Role }): Promise<EventWithRelations> {
+    if (currentUser.role === Role.EVENT_ORGANIZER) {
+      const isOwner = await this.eventRepository.checkEventOwnership(eventId, currentUser.userId);
+      if (!isOwner) {
+        throw new ForbiddenException('You can only delete your own events');
+      }
+    } else if (currentUser.role !== Role.ADMIN) {
+      throw new ForbiddenException('Only event organizers and admins can delete events');
     }
 
     return this.eventRepository.deleteEvent(eventId);
+  }
+
+  async findEventsByOrganizerForAdmin(organizerId: number, currentUser: { userId: number; role: Role }): Promise<EventWithRelations[]> {
+    if (currentUser.role !== Role.ADMIN) {
+      throw new ForbiddenException('Only admins can view events by organizer');
+    }
+
+    return this.eventRepository.findEventsByOrganizerId(organizerId);
+  }
+
+  async searchEvents(searchDto: SearchEventDto): Promise<{ events: EventWithRelations[]; total: number; page: number; limit: number }> {
+    return this.eventRepository.searchEvents(searchDto);
   }
 }

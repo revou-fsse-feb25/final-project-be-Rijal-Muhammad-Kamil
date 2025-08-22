@@ -6,9 +6,10 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { EventModule } from './event/event.module';
+import { TransactionModule } from './transaction/transaction.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, UserModule, AuthModule, EventModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, UserModule, AuthModule, EventModule, TransactionModule],
   controllers: [AppController],
   providers: [AppService],
 })

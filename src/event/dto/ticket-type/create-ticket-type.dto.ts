@@ -5,7 +5,7 @@ import { TicketStatus } from '@prisma/client';
 export class CreateTicketTypeDTO {
   @ApiProperty({
     example: 1,
-    description: 'ID of the TicketTypeCategory',
+    description: 'ID of the TicketTypeCategory (required)',
   })
   @IsNotEmpty()
   @IsNumber()
@@ -41,7 +41,7 @@ export class CreateTicketTypeDTO {
 
   @ApiProperty({
     enum: TicketStatus,
-    example: TicketStatus.available,
+    example: TicketStatus.AVAILABLE,
     description: 'Status of the ticket type',
     required: false,
   })

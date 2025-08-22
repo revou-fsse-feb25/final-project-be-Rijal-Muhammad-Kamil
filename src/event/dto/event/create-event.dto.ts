@@ -59,7 +59,7 @@ export class CreateEventDTO {
 
   @ApiProperty({
     enum: EventStatus,
-    example: EventStatus.active,
+    example: EventStatus.ACTIVE,
     description: 'Current status of the event',
     required: false,
   })
