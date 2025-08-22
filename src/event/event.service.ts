@@ -1,26 +1,47 @@
-import { Injectable } from '@nestjs/common';
-import { CreateEventDto } from './dto/create-event.dto';
+import { Injectable, ForbiddenException } from '@nestjs/common';
+import { EventRepository } from './repository/repository';
+import { CreateEventDTO } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { Event, Role } from '@prisma/client';
 
 @Injectable()
 export class EventService {
-  create(createEventDto: CreateEventDto) {
-    return 'This action adds a new event';
+  constructor(private readonly eventRepository: EventRepository) {}
+
+  async createEvent(createEventDto: CreateEventDTO, currentUser: { userId: number; role: Role; organizerId?: number }): Promise<Event> {
+    if (!currentUser.organizerId && currentUser.role !== 'ADMIN') {
+      throw new ForbiddenException('You are not allowed to create an event');
+    }
+
+    const organizerId = currentUser.organizerId!;
+    return this.eventRepository.createEvent(createEventDto, organizerId);
   }
 
-  findAll() {
-    return `This action returns all event`;
+  async findEventById(eventId: number): Promise<Event> {
+    return this.eventRepository.findEventById(eventId);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} event`;
+  async findAllEvents(): Promise<Event[]> {
+    return this.eventRepository.findAllEvents();
   }
 
-  update(id: number, updateEventDto: UpdateEventDto) {
-    return `This action updates a #${id} event`;
+  async updateEvent(eventId: number, updateEventDto: UpdateEventDto, currentUser: { userId: number; role: Role; organizerId?: number }): Promise<Event> {
+    const event = await this.eventRepository.findEventById(eventId);
+
+    if (currentUser.role !== 'ADMIN' && event.organizer_id !== currentUser.organizerId) {
+      throw new ForbiddenException('You are not allowed to update this event');
+    }
+
+    return this.eventRepository.updateEvent(eventId, updateEventDto);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} event`;
+  async deleteEvent(eventId: number, currentUser: { userId: number; role: Role; organizerId?: number }): Promise<Event> {
+    const event = await this.eventRepository.findEventById(eventId);
+
+    if (currentUser.role !== 'ADMIN' && event.organizer_id !== currentUser.organizerId) {
+      throw new ForbiddenException('You are not allowed to delete this event');
+    }
+
+    return this.eventRepository.deleteEvent(eventId);
   }
 }

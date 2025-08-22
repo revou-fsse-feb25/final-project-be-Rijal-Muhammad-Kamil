@@ -14,9 +14,9 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Login successful, returns access token and user info',
-    type: LoginUserDTO,
-  })
+})
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async login(@Body() loginUserDTO: LoginUserDTO) {
     return this.authService.login(loginUserDTO);
   }

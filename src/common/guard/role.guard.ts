@@ -12,15 +12,12 @@ export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    // Ambil roles yang diperlukan dari decorator
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [context.getHandler(), context.getClass()]);
 
-    // Jika tidak ada role yang ditentukan, akses diizinkan
     if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }
 
-    // Ambil user dari request (harus sudah lewat JwtAuthGuard)
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const user = request.user;
 

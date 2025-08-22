@@ -15,123 +15,126 @@ datasource db {
 }
 
 model User {
-  user_id       Int          @id @default(autoincrement())
-  email         String       @unique @db.VarChar(51)
-  password      String       @db.VarChar(255)
-  role          Role         @default(ATTENDEE)
-  first_name    String       @db.VarChar(51)
-  last_name     String       @db.VarChar(51)
-  date_of_birth DateTime     @db.Date
-  gender        Gender
-  phone_number  String       @unique @db.VarChar(14)
-  status        UserStatus   @default(ACTIVE)
-  created_at    DateTime     @default(now())
-  updated_at    DateTime     @updatedAt
+  user_id             Int               @id @default(autoincrement())
+  email               String            @unique @db.VarChar(51)
+  password            String            @db.VarChar(255)
+  role                Role              @default(ATTENDEE)
+  first_name          String            @db.VarChar(51)
+  last_name           String            @db.VarChar(51)
+  date_of_birth       DateTime          @db.Date
+  gender              Gender
+  phone_number        String            @unique @db.VarChar(14)
+  status              UserStatus        @default(ACTIVE)
+  created_at          DateTime          @default(now())
+  updated_at          DateTime          @updatedAt
 
-  // Relations
-  tickets        Ticket[]
-  eventOrganizer EventOrganizer?
+  transactions        Transaction[]
+  eventOrganizer      EventOrganizer?
 }
 
 model EventOrganizer {
-  organizer_id Int       @id @default(autoincrement())
-  user_id      Int       @unique
-  name         String    @unique @db.VarChar(127)
-  image_url    String?   @db.VarChar(255)
-  created_at   DateTime  @default(now())
-  updated_at   DateTime  @updatedAt
+  organizer_id        Int                @id @default(autoincrement())
+  user_id             Int                @unique
+  name                String             @unique @db.VarChar(127)
+  image_url           String?            @db.VarChar(255)
+  created_at          DateTime           @default(now())
+  updated_at          DateTime           @updatedAt
 
-  // Relations
-  user   User    @relation(fields: [user_id], references: [user_id])
-  events Event[]
+  user                User               @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  events              Event[]
 }
 
 model EventCategory {
-  category_id Int       @id @default(autoincrement())
-  name        String    @unique @db.VarChar(51)
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @updatedAt
+  category_id         Int                @id @default(autoincrement())
+  name                String             @unique @db.VarChar(51)
+  created_at          DateTime           @default(now())
+  updated_at          DateTime           @updatedAt
 
-  // Relations
-  events Event[]
+  events              Event[]
 }
 
 model Event {
-  event_id     Int         @id @default(autoincrement())
-  category_id  Int
-  organizer_id Int
-  title        String      @db.VarChar(127)
-  description  String
-  terms        String
-  location     String      @db.VarChar(127)
-  image_url    String      @db.VarChar(255)
-  status       EventStatus @default(active)
-  created_at   DateTime    @default(now())
-  updated_at   DateTime    @updatedAt
+  event_id            Int                @id @default(autoincrement())
+  category_id         Int?
+  organizer_id        Int?
+  title               String             @db.VarChar(127)
+  description         String
+  terms               String
+  location            String             @db.VarChar(127)
+  image_url           String             @db.VarChar(255)
+  status              EventStatus        @default(ACTIVE)
+  created_at          DateTime           @default(now())
+  updated_at          DateTime           @updatedAt
 
-  // Relations
-  category EventCategory     @relation(fields: [category_id], references: [category_id])
-  organizer EventOrganizer   @relation(fields: [organizer_id], references: [organizer_id])
-  periods   EventPeriod[]
+  category            EventCategory?     @relation(fields: [category_id], references: [category_id], onDelete: SetNull)
+  organizer           EventOrganizer?    @relation(fields: [organizer_id], references: [organizer_id], onDelete: SetNull)
+  periods             EventPeriod[]
 }
 
 model EventPeriod {
-  period_id  Int          @id @default(autoincrement())
-  event_id   Int
-  name       String       @db.VarChar(127)
-  start_date DateTime      @db.Date
-  end_date   DateTime      @db.Date
-  start_time DateTime      @db.Time
-  end_time   DateTime      @db.Time
-  status     PeriodStatus @default(upcoming)
-  created_at DateTime     @default(now())
-  updated_at DateTime     @updatedAt
+  period_id            Int                @id @default(autoincrement())
+  event_id             Int
+  name                 String             @db.VarChar(127)
+  start_date           DateTime           @db.Date
+  end_date             DateTime           @db.Date
+  start_time           DateTime           @db.Time
+  end_time             DateTime           @db.Time
+  status               PeriodStatus       @default(UPCOMING)
+  created_at           DateTime           @default(now())
+  updated_at           DateTime           @updatedAt
 
-  // Relations
-  event       Event        @relation(fields: [event_id], references: [event_id])
-  ticketTypes TicketType[]
+  event                Event              @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+  ticketTypes          TicketType[]
 }
 
 model TicketTypeCategory {
-  category_id Int          @id @default(autoincrement())
-  name        String       @unique @db.VarChar(51)
-  created_at  DateTime     @default(now())
-  updated_at  DateTime     @updatedAt
+  category_id          Int                @id @default(autoincrement())
+  name                 String             @unique @db.VarChar(51)
+  created_at           DateTime           @default(now())
+  updated_at           DateTime           @updatedAt
 
-  // Relations
-  ticketTypes TicketType[]
+  ticketTypes          TicketType[]
 }
 
 model TicketType {
-  type_id     Int          @id @default(autoincrement())
-  period_id   Int
-  category_id Int
-  price       Decimal      @db.Decimal(10, 2)
-  discount    Decimal?     @db.Decimal(10, 2)
-  quota       Int
-  status      TicketStatus @default(available)
-  created_at  DateTime     @default(now())
-  updated_at  DateTime     @updatedAt
+  type_id              Int                @id @default(autoincrement())
+  period_id            Int
+  category_id          Int?
+  price                Decimal            @db.Decimal(10, 2)
+  discount             Decimal?           @db.Decimal(10, 2)
+  quota                Int
+  status               TicketStatus       @default(AVAILABLE)
+  created_at           DateTime           @default(now())
+  updated_at           DateTime           @updatedAt
 
-  // Relations
-  period   EventPeriod        @relation(fields: [period_id], references: [period_id])
-  category TicketTypeCategory @relation(fields: [category_id], references: [category_id])
-  tickets  Ticket[]
+  period               EventPeriod         @relation(fields: [period_id], references: [period_id], onDelete: Cascade)
+  category             TicketTypeCategory? @relation(fields: [category_id], references: [category_id], onDelete: SetNull)
+  tickets              Ticket[]
 }
 
 model Ticket {
-  ticket_id   Int       @id @default(autoincrement())
-  type_id     Int
-  buyer_id    Int?
-  ticket_code String    @unique @db.VarChar(51)
-  created_at  DateTime  @default(now())
+  ticket_id            Int                @id @default(autoincrement())
+  type_id              Int
+  transaction_id       Int?
+  ticket_code          String             @unique @db.VarChar(51)
+  created_at           DateTime           @default(now())
 
-  // Relations
-  type  TicketType @relation(fields: [type_id], references: [type_id])
-  buyer User?      @relation(fields: [buyer_id], references: [user_id])
+  type                 TicketType         @relation(fields: [type_id], references: [type_id], onDelete: Cascade)
+  transaction          Transaction?       @relation(fields: [transaction_id], references: [transaction_id], onDelete: SetNull)
 }
 
-// Enums
+model Transaction {
+  transaction_id       Int                @id @default(autoincrement())
+  user_id              Int?              
+  status               TRANSACTION_STATUS @default(PENDING)
+  payment_method       PAYMENT_METHOD
+  created_at           DateTime           @default(now())
+  updated_at           DateTime           @updatedAt
+
+  user                 User?              @relation(fields: [user_id], references: [user_id], onDelete: SetNull)
+  tickets              Ticket[]
+}
+
 enum Role {
   ATTENDEE
   EVENT_ORGANIZER
@@ -139,8 +142,8 @@ enum Role {
 }
 
 enum Gender {
-  Male
-  Female
+  MALE
+  FEMALE
 }
 
 enum UserStatus {
@@ -150,18 +153,33 @@ enum UserStatus {
 }
 
 enum EventStatus {
-  active
-  inactive
-  completed
+  ACTIVE
+  INACTIVE
+  COMPLETED
 }
 
 enum PeriodStatus {
-  upcoming
-  ongoing
-  completed
+  UPCOMING
+  ONGOING
+  COMPLETED
 }
 
 enum TicketStatus {
-  available
-  sold_out
+  AVAILABLE
+  SOLD_OUT
+}
+
+enum TRANSACTION_STATUS {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELED
+}
+
+enum PAYMENT_METHOD {
+  CREDIT_CARD
+  BANK_TRANSFER
+  OVO
+  DANA
+  GOPAY
 }
