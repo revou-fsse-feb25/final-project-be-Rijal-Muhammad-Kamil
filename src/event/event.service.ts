@@ -63,11 +63,7 @@ export class EventService {
     return this.eventRepository.findEventsByOrganizerId(eventOrganizer.organizer_id);
   }
 
-  async findAllEvents(currentUser: { userId: number; role: Role }): Promise<EventWithRelations[]> {
-    if (currentUser.role !== Role.ADMIN) {
-      throw new ForbiddenException('Only admins can view all events');
-    }
-
+  async findAllEvents(): Promise<EventWithRelations[]> {
     return this.eventRepository.findAllEvents();
   }
 
@@ -95,6 +91,10 @@ export class EventService {
     }
 
     return this.eventRepository.deleteEvent(eventId);
+  }
+
+  async findEventsByOrganizer(organizerId: number): Promise<EventWithRelations[]> {
+    return this.eventRepository.findEventsByOrganizerId(organizerId);
   }
 
   async findEventsByOrganizerForAdmin(organizerId: number, currentUser: { userId: number; role: Role }): Promise<EventWithRelations[]> {

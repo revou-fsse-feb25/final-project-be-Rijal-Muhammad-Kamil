@@ -43,7 +43,7 @@ export class TransactionRepository implements ITransactionRepository {
           payment_method: createTransactionDto.payment_method,
           status: TRANSACTION_STATUS.PENDING,
           tickets: {
-            connect: createTransactionDto.ticket_ids.map(id => ({ ticket_id: id })),
+            connect: createTransactionDto.ticket_ids.map((id) => ({ ticket_id: id })),
           },
         },
         include: {

@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
-import { UpdateTransactionDto } from './dto/update-transaction.dto';
+
 import { SearchTransactionDto } from './dto/search-transaction.dto';
 import { TransactionRepository } from './repository/repository';
 import { TransactionWithRelations } from './repository/repository.interface';
@@ -15,22 +15,16 @@ interface CurrentUser {
 export class TransactionService {
   constructor(private readonly transactionRepository: TransactionRepository) {}
 
-  async createTransaction(
-    createTransactionDto: CreateTransactionDto,
-    currentUser: CurrentUser,
-  ): Promise<TransactionWithRelations> {
-    // Only ATTENDEE and ADMIN can create transactions
-    if (currentUser.role === Role.EVENT_ORGANIZER) {
-      throw new ForbiddenException('Event organizers cannot create transactions');
+  async createTransaction(createTransactionDto: CreateTransactionDto, currentUser: CurrentUser): Promise<TransactionWithRelations> {
+    // Only ATTENDEE can create transactions (buy tickets)
+    if (currentUser.role !== Role.ATTENDEE) {
+      throw new ForbiddenException('Only attendees can create transactions');
     }
 
     return this.transactionRepository.createTransaction(createTransactionDto, currentUser.userId);
   }
 
-  async findTransactionById(
-    transactionId: number,
-    currentUser: CurrentUser,
-  ): Promise<TransactionWithRelations> {
+  async findTransactionById(transactionId: number, currentUser: CurrentUser): Promise<TransactionWithRelations> {
     const transaction = await this.transactionRepository.findTransactionById(transactionId);
 
     // Users can only view their own transactions, admins can view all
@@ -42,9 +36,9 @@ export class TransactionService {
   }
 
   async findMyTransactions(currentUser: CurrentUser): Promise<TransactionWithRelations[]> {
-    // Only ATTENDEE and ADMIN can view transactions
-    if (currentUser.role === Role.EVENT_ORGANIZER) {
-      throw new ForbiddenException('Event organizers cannot view transactions');
+    // Only ATTENDEE can view their own transactions
+    if (currentUser.role !== Role.ATTENDEE) {
+      throw new ForbiddenException('Only attendees can view their transactions');
     }
 
     return this.transactionRepository.findTransactionsByUserId(currentUser.userId);
@@ -59,32 +53,13 @@ export class TransactionService {
     return this.transactionRepository.findAllTransactions();
   }
 
-  async updateTransaction(
-    transactionId: number,
-    updateTransactionDto: UpdateTransactionDto,
-    currentUser: CurrentUser,
-  ): Promise<TransactionWithRelations> {
+  async cancelTransaction(transactionId: number, currentUser: CurrentUser): Promise<TransactionWithRelations> {
     // Check if transaction exists and user has permission
     const existingTransaction = await this.transactionRepository.findTransactionById(transactionId);
-    
-    // Users can only update their own transactions, admins can update all
-    if (currentUser.role !== Role.ADMIN && existingTransaction.user_id !== currentUser.userId) {
-      throw new ForbiddenException('You can only update your own transactions');
-    }
 
-    return this.transactionRepository.updateTransaction(transactionId, updateTransactionDto);
-  }
-
-  async deleteTransaction(
-    transactionId: number,
-    currentUser: CurrentUser,
-  ): Promise<TransactionWithRelations> {
-    // Check if transaction exists and user has permission
-    const existingTransaction = await this.transactionRepository.findTransactionById(transactionId);
-    
-    // Users can only delete their own transactions, admins can delete all
+    // Users can only cancel their own transactions, admins can cancel all
     if (currentUser.role !== Role.ADMIN && existingTransaction.user_id !== currentUser.userId) {
-      throw new ForbiddenException('You can only delete your own transactions');
+      throw new ForbiddenException('You can only cancel your own transactions');
     }
 
     return this.transactionRepository.deleteTransaction(transactionId);
@@ -116,9 +91,9 @@ export class TransactionService {
     page: number;
     limit: number;
   }> {
-    // Only ATTENDEE and ADMIN can search their own transactions
-    if (currentUser.role === Role.EVENT_ORGANIZER) {
-      throw new ForbiddenException('Event organizers cannot search transactions');
+    // Only ATTENDEE can search their own transactions
+    if (currentUser.role !== Role.ATTENDEE) {
+      throw new ForbiddenException('Only attendees can search their transactions');
     }
 
     // Modify search to filter by current user
@@ -130,26 +105,26 @@ export class TransactionService {
     // We need to modify the repository method to accept user_id filter
     // For now, we'll get user transactions and apply filters manually
     const userTransactions = await this.transactionRepository.findTransactionsByUserId(currentUser.userId);
-    
+
     // Apply filters manually (this could be optimized by modifying repository)
     let filteredTransactions = userTransactions;
-    
+
     if (searchDto.status) {
-      filteredTransactions = filteredTransactions.filter(t => t.status === searchDto.status);
+      filteredTransactions = filteredTransactions.filter((t) => t.status === searchDto.status);
     }
-    
+
     if (searchDto.payment_method) {
-      filteredTransactions = filteredTransactions.filter(t => t.payment_method === searchDto.payment_method);
+      filteredTransactions = filteredTransactions.filter((t) => t.payment_method === searchDto.payment_method);
     }
-    
+
     if (searchDto.start_date) {
       const startDate = new Date(searchDto.start_date);
-      filteredTransactions = filteredTransactions.filter(t => new Date(t.created_at) >= startDate);
+      filteredTransactions = filteredTransactions.filter((t) => new Date(t.created_at) >= startDate);
     }
-    
+
     if (searchDto.end_date) {
       const endDate = new Date(searchDto.end_date + 'T23:59:59.999Z');
-      filteredTransactions = filteredTransactions.filter(t => new Date(t.created_at) <= endDate);
+      filteredTransactions = filteredTransactions.filter((t) => new Date(t.created_at) <= endDate);
     }
 
     // Apply pagination

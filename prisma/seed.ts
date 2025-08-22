@@ -1,4 +1,4 @@
-import { PrismaClient, Role, Gender, UserStatus, EventStatus, PeriodStatus, TicketStatus } from '@prisma/client';
+import { PrismaClient, Role, Gender, UserStatus, EventStatus, PeriodStatus, TicketStatus, TRANSACTION_STATUS, PAYMENT_METHOD } from '@prisma/client';
 import { AttendeeUser, OrganizerUser } from './interface';
 import { faker } from '@faker-js/faker';
 import * as bcrypt from 'bcrypt';
@@ -108,7 +108,7 @@ async function main() {
           terms: faker.lorem.paragraphs(2),
           location: faker.location.city(),
           image_url: faker.image.urlLoremFlickr({ category: 'event' }) ?? 'https://via.placeholder.com/150',
-          status: EventStatus.active,
+          status: EventStatus.ACTIVE,
           created_at: new Date(),
           updated_at: new Date(),
         },
@@ -133,7 +133,7 @@ async function main() {
             end_date: endDate,
             start_time: startTime,
             end_time: endTime,
-            status: PeriodStatus.upcoming,
+            status: PeriodStatus.UPCOMING,
             created_at: new Date(),
             updated_at: new Date(),
           },
@@ -153,25 +153,73 @@ async function main() {
               price,
               discount,
               quota: faker.number.int({ min: 50, max: 500 }),
-              status: TicketStatus.available,
+              status: TicketStatus.AVAILABLE,
               created_at: new Date(),
               updated_at: new Date(),
             },
           });
 
-          // Tickets purchased by attendees (0-2 per ticket type)
-          const purchaseCount = faker.number.int({ min: 0, max: 2 });
-          for (let t = 0; t < purchaseCount; t++) {
-            const attendee = faker.helpers.arrayElement(attendeeUsers);
+          // Create available tickets for this ticket type (without transaction_id)
+          // These tickets will be available for purchase
+          const ticketCount = faker.number.int({ min: 10, max: 50 });
+          for (let t = 0; t < ticketCount; t++) {
             await prisma.ticket.create({
               data: {
                 type_id: ticketType.type_id,
-                buyer_id: attendee.user_id,
                 ticket_code: faker.string.alphanumeric(10).toUpperCase(),
                 created_at: new Date(),
               },
             });
           }
+        }
+      }
+    }
+  }
+
+  // Create some sample transactions
+  console.log('Creating sample transactions...');
+  
+  // Get some ticket types for creating transactions
+  const ticketTypes = await prisma.ticketType.findMany({
+    take: 5,
+    include: {
+      tickets: {
+        where: {
+          transaction_id: null // Only available tickets
+        },
+        take: 3
+      }
+    }
+  });
+
+  // Create transactions for attendees
+  for (const attendee of attendeeUsers) {
+    // Create 1-2 transactions per attendee
+    const transactionCount = faker.number.int({ min: 1, max: 2 });
+    
+    for (let i = 0; i < transactionCount; i++) {
+      const selectedTicketType = faker.helpers.arrayElement(ticketTypes);
+      
+      if (selectedTicketType.tickets.length > 0) {
+        // Create transaction
+        const transaction = await prisma.transaction.create({
+          data: {
+            user_id: attendee.user_id,
+            status: faker.helpers.arrayElement([TRANSACTION_STATUS.PENDING, TRANSACTION_STATUS.SUCCESS]),
+            payment_method: faker.helpers.arrayElement(Object.values(PAYMENT_METHOD)),
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
+        });
+
+        // Assign 1-2 tickets to this transaction
+        const ticketsToAssign = selectedTicketType.tickets.slice(0, faker.number.int({ min: 1, max: Math.min(2, selectedTicketType.tickets.length) }));
+        
+        for (const ticket of ticketsToAssign) {
+          await prisma.ticket.update({
+            where: { ticket_id: ticket.ticket_id },
+            data: { transaction_id: transaction.transaction_id },
+          });
         }
       }
     }

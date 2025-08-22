@@ -41,28 +41,20 @@ export class EventController {
   }
 
   @Get('all')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth()
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Get all events (Admin only)' })
+  @ApiOperation({ summary: 'Get all events (Public access)' })
   @ApiResponse({ status: 200, description: 'List of all events in the system' })
-  @ApiResponse({ status: 403, description: 'Access denied: Only admins can view all events' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async findAllEvents(@CurrentUser() currentUser: { userId: number; role: Role }) {
-    return this.eventService.findAllEvents(currentUser);
+  async findAllEvents() {
+    return this.eventService.findAllEvents();
   }
 
   @Get('organizer/:organizerId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth()
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Get all events by specific organizer (Admin only)' })
+  @ApiOperation({ summary: 'Get all events by specific organizer (Public access)' })
   @ApiResponse({ status: 200, description: 'List of events by specific organizer' })
-  @ApiResponse({ status: 403, description: 'Access denied: Only admins can view events by organizer' })
   @ApiResponse({ status: 404, description: 'Organizer not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async findEventsByOrganizer(@Param('organizerId', ParseIntPipe) organizerId: number, @CurrentUser() currentUser: { userId: number; role: Role }) {
-    return this.eventService.findEventsByOrganizerForAdmin(organizerId, currentUser);
+  async findEventsByOrganizer(@Param('organizerId', ParseIntPipe) organizerId: number) {
+    return this.eventService.findEventsByOrganizer(organizerId);
   }
 
   @Get('search')
