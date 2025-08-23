@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsEnum, IsString, IsDateString, Matches, MinLength, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsEmail, IsString, Matches, MinLength, MaxLength, IsEnum, IsDateString, IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { Role, Gender } from '@prisma/client';
@@ -81,15 +81,6 @@ export class CreateUserDTO {
   gender: Gender;
 
   @IsNotEmpty()
-  @IsEnum(Role)
-  @ApiProperty({
-    example: Role.ATTENDEE,
-    description: 'Role of the user, default is ATTENDEE if not provided.',
-    enum: Role,
-  })
-  role: Role;
-
-  @IsNotEmpty()
   @IsDateString()
   @Transform(({ value }) => new Date(value))
   @ApiProperty({
@@ -99,4 +90,13 @@ export class CreateUserDTO {
     format: 'date',
   })
   date_of_birth: Date;
+
+  @IsOptional()
+  @IsEnum(Role)
+  @ApiProperty({
+    example: Role.ATTENDEE,
+    description: 'Role of the user, default is ATTENDEE if not provided.',
+    default: Role.ATTENDEE,
+  })
+  role?: Role = Role.ATTENDEE;
 }

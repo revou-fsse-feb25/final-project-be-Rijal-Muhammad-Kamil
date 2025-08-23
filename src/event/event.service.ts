@@ -1,6 +1,6 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EventRepository } from './repository/repository';
-import { UserRepository } from 'src/user/repository/reposityry';
+import { UserRepository } from 'src/user/repository/repository';
 import { CreateEventDTO } from './dto/event/create-event.dto';
 import { UpdateEventDto } from './dto/event/update-event.dto';
 import { SearchEventDto } from './dto/event/search-event.dto';

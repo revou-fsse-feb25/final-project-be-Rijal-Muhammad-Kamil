@@ -1,6 +1,6 @@
 import { CreateUserDTO } from '../dto/create-user.dto';
-import { UpdateUserDto } from '../dto/update-user.dto';
 import { User } from '@prisma/client';
+import { UpdateUserDto } from '../dto/update-user.dto';
 
 export interface IUserRepository {
   createUser(createUserDTO: CreateUserDTO): Promise<User>;

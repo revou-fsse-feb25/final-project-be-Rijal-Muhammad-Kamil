@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException, InternalServerErrorException } from 
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginUserDTO } from './dto/create-auth.dto';
-import { UserRepository } from 'src/user/repository/reposityry';
+import { UserRepository } from 'src/user/repository/repository';
 
 @Injectable()
 export class AuthService {

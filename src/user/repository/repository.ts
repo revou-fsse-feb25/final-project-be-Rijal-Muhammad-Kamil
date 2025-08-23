@@ -1,15 +1,14 @@
-import { Injectable } from '@nestjs/common';
-import { IUserRepository } from '../repository/repository.interface';
+import { Injectable, ConflictException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { IUserRepository } from './repository.interface';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { InternalServerErrorException, ConflictException, NotFoundException } from '@nestjs/common';
 import { CreateUserDTO } from '../dto/create-user.dto';
-import { UpdateUserDto } from '../dto/update-user.dto';
-import { Role, User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { Role, User } from '@prisma/client';
+import { UpdateUserDto } from '../dto/update-user.dto';
 
 @Injectable()
 export class UserRepository implements IUserRepository {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   private async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 10);
@@ -25,7 +24,7 @@ export class UserRepository implements IUserRepository {
         },
       });
       return user;
-    } catch (error: any) {
+    } catch (error) {
       if (error.code === 'P2002') {
         throw new ConflictException('Email or phone number already exists');
       }
@@ -34,35 +33,19 @@ export class UserRepository implements IUserRepository {
   }
 
   async findUserByEmail(email: string): Promise<User> {
-    try {
-      const user = await this.prisma.user.findFirst({
-        where: {
-          email,
-          deleted_at: null,
-        },
-      });
-      if (!user) throw new NotFoundException(`User with email ${email} not found`);
-      return user;
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(error.message);
-    }
+    const user = await this.prisma.user.findFirst({
+      where: { email, deleted_at: null },
+    });
+    if (!user) throw new NotFoundException(`User with email ${email} not found`);
+    return user;
   }
 
   async findUserById(user_id: number): Promise<User> {
-    try {
-      const user = await this.prisma.user.findFirst({
-        where: {
-          user_id,
-          deleted_at: null,
-        },
-      });
-      if (!user) throw new NotFoundException(`User with ID ${user_id} not found`);
-      return user;
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(error.message);
-    }
+    const user = await this.prisma.user.findFirst({
+      where: { user_id, deleted_at: null },
+    });
+    if (!user) throw new NotFoundException(`User with ID ${user_id} not found`);
+    return user;
   }
 
   async findAllUsers(): Promise<User[]> {
@@ -80,12 +63,9 @@ export class UserRepository implements IUserRepository {
     const user = await this.prisma.user.findFirst({
       where: { user_id, deleted_at: null },
     });
+    if (!user) throw new NotFoundException(`User with ID ${user_id} not found`);
 
-    if (!user) {
-      throw new NotFoundException(`User with ID ${user_id} not found`);
-    }
-
-    const data = { ...updateUserDTO };
+    const data: Partial<UpdateUserDto> = { ...updateUserDTO };
 
     if (data.password) {
       data.password = await this.hashPassword(data.password);
@@ -96,11 +76,11 @@ export class UserRepository implements IUserRepository {
         where: { user_id },
         data,
       });
-    } catch (error: any) {
-      if (error.code === 'P2002') {
+    } catch (error) {
+      if (error?.code === 'P2002') {
         throw new ConflictException('Email or phone number already exists');
       }
-      throw new InternalServerErrorException(error.message);
+      throw new InternalServerErrorException(error?.message || 'Unexpected error');
     }
   }
 
@@ -108,18 +88,15 @@ export class UserRepository implements IUserRepository {
     const user = await this.prisma.user.findFirst({
       where: { user_id, deleted_at: null },
     });
-
-    if (!user) {
-      throw new NotFoundException(`User with ID ${user_id} not found`);
-    }
+    if (!user) throw new NotFoundException(`User with ID ${user_id} not found`);
 
     try {
       return await this.prisma.user.update({
         where: { user_id },
         data: { deleted_at: new Date() },
       });
-    } catch (error: any) {
-      throw new InternalServerErrorException(error.message);
+    } catch (error) {
+      throw new InternalServerErrorException(error?.message || 'Unexpected error');
     }
   }
 }

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { UserService } from './user.service';
 import { UserController } from './user.controller';
-import { UserRepository } from './repository/reposityry';
+import { UserService } from './user.service';
+import { UserRepository } from './repository/repository';
 import { EventOrganizerRepository } from '../event-organizer/repository/repository';
 
 @Module({
