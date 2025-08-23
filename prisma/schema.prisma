@@ -15,59 +15,66 @@ datasource db {
 }
 
 model User {
-  user_id             Int               @id @default(autoincrement())
-  email               String            @unique @db.VarChar(51)
-  password            String            @db.VarChar(255)
-  role                Role              @default(ATTENDEE)
-  first_name          String            @db.VarChar(51)
-  last_name           String            @db.VarChar(51)
-  date_of_birth       DateTime          @db.Date
+  user_id             Int                 @id @default(autoincrement())
+  email               String              @unique @db.VarChar(51)
+  password            String              @db.VarChar(255)
+  role                Role                @default(ATTENDEE)
+  first_name          String              @db.VarChar(51)
+  last_name           String              @db.VarChar(51)
+  date_of_birth       DateTime            @db.Date
   gender              Gender
-  phone_number        String            @unique @db.VarChar(14)
-  status              UserStatus        @default(ACTIVE)
-  created_at          DateTime          @default(now())
-  updated_at          DateTime          @updatedAt
+  phone_number        String              @unique @db.VarChar(51)
+  avatar_url           String?            @db.VarChar(255)
+  status              UserStatus          @default(ACTIVE)
+  created_at          DateTime            @default(now())
+  updated_at          DateTime            @updatedAt
+  deleted_at          DateTime?
 
   transactions        Transaction[]
   eventOrganizer      EventOrganizer?
 }
 
 model EventOrganizer {
-  organizer_id        Int                @id @default(autoincrement())
-  user_id             Int                @unique
-  name                String             @unique @db.VarChar(127)
-  image_url           String?            @db.VarChar(255)
-  created_at          DateTime           @default(now())
-  updated_at          DateTime           @updatedAt
+  organizer_id        Int                 @id @default(autoincrement())
+  user_id             Int                 @unique
+  name                String              @unique @db.VarChar(127)
+  address             String              @db.VarChar(255)
+  description         String?
+  logo_url            String?             @db.VarChar(255)
+  created_at          DateTime            @default(now())
+  updated_at          DateTime            @updatedAt
+  deleted_at          DateTime?
 
-  user                User               @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  user                User                @relation(fields: [user_id], references: [user_id])
   events              Event[]
 }
 
 model EventCategory {
-  category_id         Int                @id @default(autoincrement())
-  name                String             @unique @db.VarChar(51)
-  created_at          DateTime           @default(now())
-  updated_at          DateTime           @updatedAt
+  category_id         Int                 @id @default(autoincrement())
+  name                String              @unique @db.VarChar(51)
+  created_at          DateTime            @default(now())
+  updated_at          DateTime            @updatedAt
+  deleted_at          DateTime?
 
   events              Event[]
 }
 
 model Event {
-  event_id            Int                @id @default(autoincrement())
-  category_id         Int?
-  organizer_id        Int?
-  title               String             @db.VarChar(127)
+  event_id            Int                 @id @default(autoincrement())
+  category_id         Int
+  organizer_id        Int
+  title               String              @db.VarChar(127)
   description         String
   terms               String
-  location            String             @db.VarChar(127)
-  image_url           String             @db.VarChar(255)
-  status              EventStatus        @default(ACTIVE)
-  created_at          DateTime           @default(now())
-  updated_at          DateTime           @updatedAt
+  location            String              @db.VarChar(127)
+  image_url           String              @db.VarChar(255)
+  status              EventStatus         @default(ACTIVE)
+  created_at          DateTime            @default(now())
+  updated_at          DateTime            @updatedAt
+  deleted_at          DateTime?
 
-  category            EventCategory?     @relation(fields: [category_id], references: [category_id], onDelete: SetNull)
-  organizer           EventOrganizer?    @relation(fields: [organizer_id], references: [organizer_id], onDelete: SetNull)
+  category            EventCategory       @relation(fields: [category_id], references: [category_id])
+  organizer           EventOrganizer      @relation(fields: [organizer_id], references: [organizer_id])
   periods             EventPeriod[]
 }
 
@@ -82,8 +89,9 @@ model EventPeriod {
   status               PeriodStatus       @default(UPCOMING)
   created_at           DateTime           @default(now())
   updated_at           DateTime           @updatedAt
+  deleted_at           DateTime?
 
-  event                Event              @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+  event                Event              @relation(fields: [event_id], references: [event_id])
   ticketTypes          TicketType[]
 }
 
@@ -92,6 +100,7 @@ model TicketTypeCategory {
   name                 String             @unique @db.VarChar(51)
   created_at           DateTime           @default(now())
   updated_at           DateTime           @updatedAt
+  deleted_at           DateTime?
 
   ticketTypes          TicketType[]
 }
@@ -99,16 +108,17 @@ model TicketTypeCategory {
 model TicketType {
   type_id              Int                @id @default(autoincrement())
   period_id            Int
-  category_id          Int?
+  category_id          Int
   price                Decimal            @db.Decimal(10, 2)
   discount             Decimal?           @db.Decimal(10, 2)
   quota                Int
   status               TicketStatus       @default(AVAILABLE)
   created_at           DateTime           @default(now())
   updated_at           DateTime           @updatedAt
+  deleted_at           DateTime?
 
-  period               EventPeriod         @relation(fields: [period_id], references: [period_id], onDelete: Cascade)
-  category             TicketTypeCategory? @relation(fields: [category_id], references: [category_id], onDelete: SetNull)
+  period               EventPeriod        @relation(fields: [period_id], references: [period_id])
+  category             TicketTypeCategory @relation(fields: [category_id], references: [category_id])
   tickets              Ticket[]
 }
 
@@ -118,20 +128,24 @@ model Ticket {
   transaction_id       Int?
   ticket_code          String             @unique @db.VarChar(51)
   created_at           DateTime           @default(now())
+  updated_at           DateTime           @updatedAt
+  deleted_at           DateTime?
 
-  type                 TicketType         @relation(fields: [type_id], references: [type_id], onDelete: Cascade)
-  transaction          Transaction?       @relation(fields: [transaction_id], references: [transaction_id], onDelete: SetNull)
+  type                 TicketType         @relation(fields: [type_id], references: [type_id])
+  transaction          Transaction?       @relation(fields: [transaction_id], references: [transaction_id])
 }
 
 model Transaction {
   transaction_id       Int                @id @default(autoincrement())
-  user_id              Int?              
-  status               TRANSACTION_STATUS @default(PENDING)
+  user_id              Int?      
+  total_price          Decimal            @db.Decimal(10, 2)
   payment_method       PAYMENT_METHOD
+  status               TRANSACTION_STATUS @default(PENDING)
   created_at           DateTime           @default(now())
   updated_at           DateTime           @updatedAt
+  deleted_at           DateTime?
 
-  user                 User?              @relation(fields: [user_id], references: [user_id], onDelete: SetNull)
+  user                 User?              @relation(fields: [user_id], references: [user_id])
   tickets              Ticket[]
 }
 
@@ -149,7 +163,6 @@ enum Gender {
 enum UserStatus {
   ACTIVE
   SUSPENDED
-  DELETED
 }
 
 enum EventStatus {

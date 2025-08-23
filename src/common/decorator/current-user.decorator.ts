@@ -5,5 +5,6 @@ export const CurrentUser = createParamDecorator((_, ctx: ExecutionContext) => {
   return {
     userId: user.userId,
     role: user.role,
+    status: user.status,
   };
 });

@@ -5,7 +5,7 @@ CREATE TYPE "public"."Role" AS ENUM ('ATTENDEE', 'EVENT_ORGANIZER', 'ADMIN');
 CREATE TYPE "public"."Gender" AS ENUM ('MALE', 'FEMALE');
 
 -- CreateEnum
-CREATE TYPE "public"."UserStatus" AS ENUM ('ACTIVE', 'SUSPENDED', 'DELETED');
+CREATE TYPE "public"."UserStatus" AS ENUM ('ACTIVE', 'SUSPENDED');
 
 -- CreateEnum
 CREATE TYPE "public"."EventStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'COMPLETED');
@@ -32,10 +32,12 @@ CREATE TABLE "public"."User" (
     "last_name" VARCHAR(51) NOT NULL,
     "date_of_birth" DATE NOT NULL,
     "gender" "public"."Gender" NOT NULL,
-    "phone_number" VARCHAR(14) NOT NULL,
+    "phone_number" VARCHAR(51) NOT NULL,
+    "avatar_url" VARCHAR(255),
     "status" "public"."UserStatus" NOT NULL DEFAULT 'ACTIVE',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("user_id")
 );
@@ -45,9 +47,12 @@ CREATE TABLE "public"."EventOrganizer" (
     "organizer_id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "name" VARCHAR(127) NOT NULL,
-    "image_url" VARCHAR(255),
+    "address" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "logo_url" VARCHAR(255),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "EventOrganizer_pkey" PRIMARY KEY ("organizer_id")
 );
@@ -58,6 +63,7 @@ CREATE TABLE "public"."EventCategory" (
     "name" VARCHAR(51) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "EventCategory_pkey" PRIMARY KEY ("category_id")
 );
@@ -65,8 +71,8 @@ CREATE TABLE "public"."EventCategory" (
 -- CreateTable
 CREATE TABLE "public"."Event" (
     "event_id" SERIAL NOT NULL,
-    "category_id" INTEGER,
-    "organizer_id" INTEGER,
+    "category_id" INTEGER NOT NULL,
+    "organizer_id" INTEGER NOT NULL,
     "title" VARCHAR(127) NOT NULL,
     "description" TEXT NOT NULL,
     "terms" TEXT NOT NULL,
@@ -75,6 +81,7 @@ CREATE TABLE "public"."Event" (
     "status" "public"."EventStatus" NOT NULL DEFAULT 'ACTIVE',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "Event_pkey" PRIMARY KEY ("event_id")
 );
@@ -91,6 +98,7 @@ CREATE TABLE "public"."EventPeriod" (
     "status" "public"."PeriodStatus" NOT NULL DEFAULT 'UPCOMING',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "EventPeriod_pkey" PRIMARY KEY ("period_id")
 );
@@ -101,6 +109,7 @@ CREATE TABLE "public"."TicketTypeCategory" (
     "name" VARCHAR(51) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "TicketTypeCategory_pkey" PRIMARY KEY ("category_id")
 );
@@ -109,13 +118,14 @@ CREATE TABLE "public"."TicketTypeCategory" (
 CREATE TABLE "public"."TicketType" (
     "type_id" SERIAL NOT NULL,
     "period_id" INTEGER NOT NULL,
-    "category_id" INTEGER,
+    "category_id" INTEGER NOT NULL,
     "price" DECIMAL(10,2) NOT NULL,
     "discount" DECIMAL(10,2),
     "quota" INTEGER NOT NULL,
     "status" "public"."TicketStatus" NOT NULL DEFAULT 'AVAILABLE',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "TicketType_pkey" PRIMARY KEY ("type_id")
 );
@@ -127,6 +137,8 @@ CREATE TABLE "public"."Ticket" (
     "transaction_id" INTEGER,
     "ticket_code" VARCHAR(51) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "Ticket_pkey" PRIMARY KEY ("ticket_id")
 );
@@ -135,10 +147,12 @@ CREATE TABLE "public"."Ticket" (
 CREATE TABLE "public"."Transaction" (
     "transaction_id" SERIAL NOT NULL,
     "user_id" INTEGER,
-    "status" "public"."TRANSACTION_STATUS" NOT NULL DEFAULT 'PENDING',
+    "total_price" DECIMAL(10,2) NOT NULL,
     "payment_method" "public"."PAYMENT_METHOD" NOT NULL,
+    "status" "public"."TRANSACTION_STATUS" NOT NULL DEFAULT 'PENDING',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "Transaction_pkey" PRIMARY KEY ("transaction_id")
 );
@@ -165,25 +179,25 @@ CREATE UNIQUE INDEX "TicketTypeCategory_name_key" ON "public"."TicketTypeCategor
 CREATE UNIQUE INDEX "Ticket_ticket_code_key" ON "public"."Ticket"("ticket_code");
 
 -- AddForeignKey
-ALTER TABLE "public"."EventOrganizer" ADD CONSTRAINT "EventOrganizer_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."User"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."EventOrganizer" ADD CONSTRAINT "EventOrganizer_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."User"("user_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."Event" ADD CONSTRAINT "Event_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "public"."EventCategory"("category_id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "public"."Event" ADD CONSTRAINT "Event_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "public"."EventCategory"("category_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."Event" ADD CONSTRAINT "Event_organizer_id_fkey" FOREIGN KEY ("organizer_id") REFERENCES "public"."EventOrganizer"("organizer_id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "public"."Event" ADD CONSTRAINT "Event_organizer_id_fkey" FOREIGN KEY ("organizer_id") REFERENCES "public"."EventOrganizer"("organizer_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."EventPeriod" ADD CONSTRAINT "EventPeriod_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "public"."Event"("event_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."EventPeriod" ADD CONSTRAINT "EventPeriod_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "public"."Event"("event_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."TicketType" ADD CONSTRAINT "TicketType_period_id_fkey" FOREIGN KEY ("period_id") REFERENCES "public"."EventPeriod"("period_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."TicketType" ADD CONSTRAINT "TicketType_period_id_fkey" FOREIGN KEY ("period_id") REFERENCES "public"."EventPeriod"("period_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."TicketType" ADD CONSTRAINT "TicketType_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "public"."TicketTypeCategory"("category_id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "public"."TicketType" ADD CONSTRAINT "TicketType_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "public"."TicketTypeCategory"("category_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."Ticket" ADD CONSTRAINT "Ticket_type_id_fkey" FOREIGN KEY ("type_id") REFERENCES "public"."TicketType"("type_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."Ticket" ADD CONSTRAINT "Ticket_type_id_fkey" FOREIGN KEY ("type_id") REFERENCES "public"."TicketType"("type_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."Ticket" ADD CONSTRAINT "Ticket_transaction_id_fkey" FOREIGN KEY ("transaction_id") REFERENCES "public"."Transaction"("transaction_id") ON DELETE SET NULL ON UPDATE CASCADE;

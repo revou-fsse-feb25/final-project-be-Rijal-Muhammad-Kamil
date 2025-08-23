@@ -6,8 +6,8 @@ import { Roles } from 'src/common/decorator/role.decorator';
 import { UserService } from './user.service';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { CreateEventOrganizerDto } from './dto/create-event-organizer.dto';
-import { UpdateEventOrganizerDto } from './dto/update-event-organizer.dto';
+import { CreateEventOrganizerDto } from '../event-organizer/dto/create-event-organizer.dto';
+import { UpdateEventOrganizerDto } from '../event-organizer/dto/update-event-organizer.dto';
 import { Role, User, EventOrganizer } from '@prisma/client';
 import { CurrentUser } from 'src/common/decorator/current-user.decorator';
 
@@ -58,36 +58,36 @@ export class UserController {
     return this.userService.deleteUser(id, currentUser);
   }
 
-  @Post('event-organizers')
-  @ApiOperation({ summary: 'Create a new Event Organizer' })
-  @ApiResponse({ status: 201, description: 'Event Organizer successfully created', type: CreateEventOrganizerDto })
-  @ApiResponse({ status: 400, description: 'User already has an Event Organizer' })
-  @ApiResponse({ status: 403, description: 'Only ATTENDEE or ADMIN can create an Event Organizer' })
-  async createEventOrganizer(@Body() createEventOrganizerDto: CreateEventOrganizerDto, @CurrentUser() currentUser: { userId: number; role: Role }): Promise<EventOrganizer> {
-    return this.userService.createEventOrganizer(createEventOrganizerDto, currentUser);
-  }
+  // @Post('event-organizers')
+  // @ApiOperation({ summary: 'Create a new Event Organizer' })
+  // @ApiResponse({ status: 201, description: 'Event Organizer successfully created', type: CreateEventOrganizerDto })
+  // @ApiResponse({ status: 400, description: 'User already has an Event Organizer' })
+  // @ApiResponse({ status: 403, description: 'Only ATTENDEE or ADMIN can create an Event Organizer' })
+  // async createEventOrganizer(@Body() createEventOrganizerDto: CreateEventOrganizerDto, @CurrentUser() currentUser: { userId: number; role: Role }): Promise<EventOrganizer> {
+  //   return this.userService.createEventOrganizer(createEventOrganizerDto, currentUser);
+  // }
 
-  @Get('event-organizers')
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Get all Event Organizers (Admin only)' })
-  @ApiResponse({ status: 200, description: 'List of Event Organizers', type: [CreateEventOrganizerDto] })
-  async findAllEventOrganizers(@CurrentUser() currentUser: { role: Role }): Promise<EventOrganizer[]> {
-    return this.userService.findAllEventOrganizer(currentUser);
-  }
+  // @Get('event-organizers')
+  // @Roles('ADMIN')
+  // @ApiOperation({ summary: 'Get all Event Organizers (Admin only)' })
+  // @ApiResponse({ status: 200, description: 'List of Event Organizers', type: [CreateEventOrganizerDto] })
+  // async findAllEventOrganizers(@CurrentUser() currentUser: { role: Role }): Promise<EventOrganizer[]> {
+  //   return this.userService.findAllEventOrganizer(currentUser);
+  // }
 
-  @Get('event-organizers/:id')
-  @ApiOperation({ summary: 'Get Event Organizer by ID (own or admin)' })
-  @ApiResponse({ status: 200, description: 'Event Organizer data', type: CreateEventOrganizerDto })
-  @ApiResponse({ status: 403, description: 'Access denied: can only view your own Event Organizer' })
-  async findEventOrganizerById(@Param('id', ParseIntPipe) id: number, @CurrentUser() currentUser: { userId: number; role: Role }): Promise<EventOrganizer> {
-    return this.userService.findEventOrganizerById(id, currentUser);
-  }
+  // @Get('event-organizers/:id')
+  // @ApiOperation({ summary: 'Get Event Organizer by ID (own or admin)' })
+  // @ApiResponse({ status: 200, description: 'Event Organizer data', type: CreateEventOrganizerDto })
+  // @ApiResponse({ status: 403, description: 'Access denied: can only view your own Event Organizer' })
+  // async findEventOrganizerById(@Param('id', ParseIntPipe) id: number, @CurrentUser() currentUser: { userId: number; role: Role }): Promise<EventOrganizer> {
+  //   return this.userService.findEventOrganizerById(id, currentUser);
+  // }
 
-  @Patch('event-organizers/:id')
-  @ApiOperation({ summary: 'Update Event Organizer by ID (own or admin)' })
-  @ApiResponse({ status: 200, description: 'Updated Event Organizer data', type: UpdateEventOrganizerDto })
-  @ApiResponse({ status: 403, description: 'Access denied: can only update your own Event Organizer' })
-  async updateEventOrganizer(@Param('id', ParseIntPipe) id: number, @Body() updateEventOrganizerDto: UpdateEventOrganizerDto, @CurrentUser() currentUser: { userId: number; role: Role }): Promise<EventOrganizer> {
-    return this.userService.updateEventOrganizer(id, updateEventOrganizerDto, currentUser);
-  }
+  // @Patch('event-organizers/:id')
+  // @ApiOperation({ summary: 'Update Event Organizer by ID (own or admin)' })
+  // @ApiResponse({ status: 200, description: 'Updated Event Organizer data', type: UpdateEventOrganizerDto })
+  // @ApiResponse({ status: 403, description: 'Access denied: can only update your own Event Organizer' })
+  // async updateEventOrganizer(@Param('id', ParseIntPipe) id: number, @Body() updateEventOrganizerDto: UpdateEventOrganizerDto, @CurrentUser() currentUser: { userId: number; role: Role }): Promise<EventOrganizer> {
+  //   return this.userService.updateEventOrganizer(id, updateEventOrganizerDto, currentUser);
+  // }
 }

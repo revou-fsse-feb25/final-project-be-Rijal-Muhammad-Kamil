@@ -1,16 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { IUserRepository } from '../repository/repository.interface';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { InternalServerErrorException, ConflictException, NotFoundException } from '@nestjs/common';
 import { CreateUserDTO } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import { CreateEventOrganizerDto } from '../dto/create-event-organizer.dto';
-import { UpdateEventOrganizerDto } from '../dto/update-event-organizer.dto';
-import { Role, User, EventOrganizer } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { InternalServerErrorException, ConflictException, NotFoundException } from '@nestjs/common';
 
 @Injectable()
-export class UserRepository {
+export class UserRepository implements IUserRepository {
   constructor(private prisma: PrismaService) {}
 
   private async hashPassword(password: string): Promise<string> {
@@ -37,7 +35,12 @@ export class UserRepository {
 
   async findUserByEmail(email: string): Promise<User> {
     try {
-      const user = await this.prisma.user.findUnique({ where: { email } });
+      const user = await this.prisma.user.findFirst({
+        where: {
+          email,
+          deleted_at: null,
+        },
+      });
       if (!user) throw new NotFoundException(`User with email ${email} not found`);
       return user;
     } catch (error) {
@@ -48,7 +51,12 @@ export class UserRepository {
 
   async findUserById(user_id: number): Promise<User> {
     try {
-      const user = await this.prisma.user.findUnique({ where: { user_id } });
+      const user = await this.prisma.user.findFirst({
+        where: {
+          user_id,
+          deleted_at: null,
+        },
+      });
       if (!user) throw new NotFoundException(`User with ID ${user_id} not found`);
       return user;
     } catch (error) {
@@ -59,13 +67,24 @@ export class UserRepository {
 
   async findAllUsers(): Promise<User[]> {
     try {
-      return this.prisma.user.findMany({ orderBy: { user_id: 'asc' } });
+      return this.prisma.user.findMany({
+        where: { deleted_at: null },
+        orderBy: { user_id: 'asc' },
+      });
     } catch (error) {
       throw new InternalServerErrorException(error.message);
     }
   }
 
   async updateUser(user_id: number, updateUserDTO: UpdateUserDto): Promise<User> {
+    const user = await this.prisma.user.findFirst({
+      where: { user_id, deleted_at: null },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${user_id} not found`);
+    }
+
     const data = { ...updateUserDTO };
 
     if (data.password) {
@@ -78,9 +97,6 @@ export class UserRepository {
         data,
       });
     } catch (error: any) {
-      if (error.code === 'P2025') {
-        throw new NotFoundException(`User with ID ${user_id} not found`);
-      }
       if (error.code === 'P2002') {
         throw new ConflictException('Email or phone number already exists');
       }
@@ -89,86 +105,20 @@ export class UserRepository {
   }
 
   async deleteUser(user_id: number): Promise<User> {
-    try {
-      return await this.prisma.user.delete({ where: { user_id } });
-    } catch (error: any) {
-      if (error.code === 'P2025') {
-        throw new NotFoundException(`User with ID ${user_id} not found`);
-      }
-      throw new InternalServerErrorException(error.message);
+    const user = await this.prisma.user.findFirst({
+      where: { user_id, deleted_at: null },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${user_id} not found`);
     }
-  }
 
-  async createEventOrganizer(createEventOrganizerDto: CreateEventOrganizerDto, user_id: number): Promise<EventOrganizer> {
     try {
-      return await this.prisma.eventOrganizer.create({
-        data: {
-          ...createEventOrganizerDto,
-          user: {
-            connect: {
-              user_id: user_id,
-            },
-          },
-        },
-      });
-    } catch (error) {
-      if (error.code === 'P2002') {
-        throw new ConflictException('Event organizer name already exists');
-      }
-      throw new InternalServerErrorException(error.message);
-    }
-  }
-
-  async findEventOrganizerById(organizer_id: number): Promise<EventOrganizer> {
-    try {
-      const organizer = await this.prisma.eventOrganizer.findUnique({
-        where: { organizer_id },
-      });
-
-      if (!organizer) {
-        throw new NotFoundException('Event organizer not found');
-      }
-
-      return organizer;
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(error.message);
-    }
-  }
-
-  async findEventOrganizerByUserId(user_id: number): Promise<EventOrganizer | null> {
-    try {
-      const organizer = await this.prisma.eventOrganizer.findUnique({
+      return await this.prisma.user.update({
         where: { user_id },
-      });
-
-      return organizer;
-    } catch (error) {
-      throw new InternalServerErrorException(error.message);
-    }
-  }
-
-  async findAllEventOrganizer(): Promise<EventOrganizer[]> {
-    try {
-      return this.prisma.eventOrganizer.findMany({ orderBy: { organizer_id: 'asc' } });
-    } catch (error) {
-      throw new InternalServerErrorException(error.message);
-    }
-  }
-
-  async updateEventOrganizer(updateEventOrganizerDto: UpdateEventOrganizerDto, organizer_id: number): Promise<EventOrganizer> {
-    try {
-      return await this.prisma.eventOrganizer.update({
-        where: { organizer_id },
-        data: updateEventOrganizerDto,
+        data: { deleted_at: new Date() },
       });
     } catch (error: any) {
-      if (error.code === 'P2025') {
-        throw new NotFoundException('Event organizer not found');
-      }
-      if (error.code === 'P2002') {
-        throw new ConflictException('Event organizer name already exists');
-      }
       throw new InternalServerErrorException(error.message);
     }
   }
