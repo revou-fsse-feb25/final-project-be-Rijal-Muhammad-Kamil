@@ -1,47 +1,28 @@
+import { Event } from '@prisma/client';
 import { CreateEventDTO } from '../dto/event/create-event.dto';
 import { UpdateEventDto } from '../dto/event/update-event.dto';
-import { SearchEventDto } from '../dto/event/search-event.dto';
-import { Prisma } from '@prisma/client';
-
-export type EventWithRelations = Prisma.EventGetPayload<{
-  include: {
-    category: true;
-    organizer: {
-      include: {
-        user: true;
-      };
-    };
-    periods: {
-      include: {
-        ticketTypes: {
-          include: {
-            category: true;
-          };
-        };
-      };
-    };
-  };
-}>;
 
 export interface IEventRepository {
-  createEvent(createEventDTO: CreateEventDTO, organizerId: number): Promise<EventWithRelations>;
+  // Create Event with Event Period and Ticket Type
+  createEvent(organizer_id: number, createEventDTO: CreateEventDTO): Promise<Event>;
 
-  findEventById(eventId: number): Promise<EventWithRelations>;
+  // Update Event with Event Period and Ticket Type
+  updateEvent(event_id: number, updateEventDTO: UpdateEventDto): Promise<Event>;
 
-  findEventsByOrganizerId(organizerId: number): Promise<EventWithRelations[]>;
+  // Delete Event and all related data
+  deleteEvent(event_id: number): Promise<Event>;
 
-  findAllEvents(): Promise<EventWithRelations[]>;
+  // Get Event Detail with Event Period and Ticket Type
+  findEventById(event_id: number): Promise<Event>;
 
-  updateEvent(eventId: number, updateEventDto: UpdateEventDto): Promise<EventWithRelations>;
-
-  deleteEvent(eventId: number): Promise<EventWithRelations>;
-
-  checkEventOwnership(eventId: number, userId: number): Promise<boolean>;
-
-  searchEvents(searchDto: SearchEventDto): Promise<{
-    events: EventWithRelations[];
+  // Get All Events with optional filters
+  findAllEvents(params: { keyword?: string; category_id?: number; location?: string; start_date?: Date; page?: number; limit?: number }): Promise<{
+    events: Event[];
     total: number;
     page: number;
     limit: number;
   }>;
+
+  // Find events by organizer
+  findEventsByOrganizerId(organizer_id: number): Promise<Event[]>;
 }

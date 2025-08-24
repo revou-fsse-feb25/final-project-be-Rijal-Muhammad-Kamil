@@ -1,46 +1,54 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { UserRepository } from './repository/repository';
 import { CreateUserDTO } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { Role, User, UserStatus } from '@prisma/client';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
   constructor(private readonly userRepository: UserRepository) {}
 
+  private ensureAdmin(currentUser: { role: Role }) {
+    if (currentUser.role !== Role.ADMIN) {
+      throw new ForbiddenException('Only admins can perform this action');
+    }
+  }
+
+  private ensureActive(currentUser: { status: UserStatus; role: Role }) {
+    if (currentUser.role !== Role.ADMIN && currentUser.status !== UserStatus.ACTIVE) {
+      throw new ForbiddenException('Your account is inactive');
+    }
+  }
+
+  private ensureOwnershipOrAdmin(userId: number, currentUser: { userId: number; role: Role }) {
+    if (currentUser.role !== Role.ADMIN && currentUser.userId !== userId) {
+      throw new ForbiddenException('Access denied: not your own data');
+    }
+  }
+
   async createUser(createUserDTO: CreateUserDTO, currentUser: any): Promise<User> {
     if (currentUser) {
       throw new ForbiddenException('Logged-in users cannot create new accounts');
     }
-
     return this.userRepository.createUser(createUserDTO);
   }
 
   async findUserById(user_id: number, currentUser: { userId: number; role: Role }): Promise<User> {
-    if (currentUser.role !== 'ADMIN' && user_id !== currentUser.userId) {
-      throw new ForbiddenException('Access denied: you can only view your own data');
-    }
+    this.ensureOwnershipOrAdmin(user_id, currentUser);
     return this.userRepository.findUserById(user_id);
   }
 
   async findAllUsers(currentUser: { role: Role }): Promise<User[]> {
-    if (currentUser.role !== 'ADMIN') {
-      throw new ForbiddenException('Only admins can view all users');
-    }
+    this.ensureAdmin(currentUser);
     return this.userRepository.findAllUsers();
   }
 
   async updateUser(user_id: number, updateUserDTO: UpdateUserDto, currentUser: { userId: number; role: Role; status: UserStatus }): Promise<User> {
-    if (currentUser.role !== 'ADMIN' && user_id !== currentUser.userId) {
-      throw new ForbiddenException('Access denied: you can only update your own data');
-    }
-
-    if (currentUser.status !== UserStatus.ACTIVE) {
-      throw new ForbiddenException('Access denied: your account is inactive');
-    }
+    this.ensureOwnershipOrAdmin(user_id, currentUser);
+    this.ensureActive(currentUser);
 
     const dataToUpdate: Partial<UpdateUserDto> = { ...updateUserDTO };
-    if (currentUser.role !== 'ADMIN') {
+    if (currentUser.role !== Role.ADMIN) {
       delete dataToUpdate.role;
     }
 
@@ -48,10 +56,7 @@ export class UserService {
   }
 
   async deleteUser(user_id: number, currentUser: { userId: number; role: Role }): Promise<User> {
-    if (currentUser.role !== 'ADMIN' && currentUser.userId !== user_id) {
-      throw new ForbiddenException('Access denied: you can only delete your own account');
-    }
-
+    this.ensureOwnershipOrAdmin(user_id, currentUser);
     return this.userRepository.deleteUser(user_id);
   }
 }

@@ -24,7 +24,7 @@ model User {
   date_of_birth       DateTime            @db.Date
   gender              Gender
   phone_number        String              @unique @db.VarChar(51)
-  avatar_url           String?            @db.VarChar(255)
+  avatar_url          String?             @db.VarChar(255)
   status              UserStatus          @default(ACTIVE)
   created_at          DateTime            @default(now())
   updated_at          DateTime            @updatedAt

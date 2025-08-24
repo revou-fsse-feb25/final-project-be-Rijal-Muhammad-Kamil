@@ -1,51 +1,58 @@
+import { IsNotEmpty, IsInt, IsNumber, Min, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsOptional, IsEnum, Min, IsDecimal } from 'class-validator';
 import { TicketStatus } from '@prisma/client';
 
 export class CreateTicketTypeDTO {
+  @IsNotEmpty()
+  @IsInt()
   @ApiProperty({
     example: 1,
-    description: 'ID of the TicketTypeCategory (required)',
+    description: 'ID of the TicketTypeCategory',
+    type: 'number',
   })
-  @IsNotEmpty()
-  @IsNumber()
   category_id: number;
 
+  @IsNotEmpty()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
   @ApiProperty({
     example: 100000.0,
-    description: 'Price of the ticket',
+    description: 'Price of the ticket (non-negative, up to 2 decimal places)',
+    minimum: 0,
+    type: 'number',
   })
-  @IsNotEmpty()
-  @IsDecimal()
-  @Min(0)
   price: number;
 
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
   @ApiProperty({
     example: 5000.0,
-    description: 'Discount for the ticket (optional)',
+    description: 'Discount for the ticket (optional, non-negative, up to 2 decimal places)',
+    minimum: 0,
     required: false,
+    type: 'number',
   })
-  @IsOptional()
-  @IsDecimal()
-  @Min(0)
   discount?: number;
 
+  @IsNotEmpty()
+  @IsInt()
+  @Min(0)
   @ApiProperty({
     example: 100,
-    description: 'Quota for this ticket type',
+    description: 'Quota for this ticket type (integer, non-negative)',
+    minimum: 0,
+    type: 'number',
   })
-  @IsNotEmpty()
-  @IsNumber()
-  @Min(0)
   quota: number;
 
+  @IsNotEmpty()
+  @IsEnum(TicketStatus)
   @ApiProperty({
-    enum: TicketStatus,
+    enum: Object.values(TicketStatus),
     example: TicketStatus.AVAILABLE,
     description: 'Status of the ticket type',
-    required: false,
+    type: 'string',
   })
-  @IsOptional()
-  @IsEnum(TicketStatus)
-  status?: TicketStatus;
+  status: TicketStatus;
 }

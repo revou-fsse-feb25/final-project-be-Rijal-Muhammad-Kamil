@@ -1,10 +1,9 @@
-import { Controller, Post, UseGuards, Body, Get, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
-import { UserService } from './user.service';
+import { Controller, Post, Body, UseGuards, Get, Param, Patch, ParseIntPipe, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { UserService } from './user.service';
 import { CurrentUser } from 'src/common/decorator/current-user.decorator';
 import { RolesGuard } from 'src/common/guard/role.guard';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
-import { Roles } from 'src/common/decorator/role.decorator';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { Role, User, UserStatus } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -24,9 +23,8 @@ export class UserController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get()
-  @Roles('ADMIN')
   @ApiOperation({ summary: 'Get all users (Admin only)' })
-  @ApiResponse({ status: 200, description: 'List of users', type: [CreateUserDTO] })
+  @ApiResponse({ status: 200, description: 'List of users' })
   @ApiResponse({ status: 403, description: 'Forbidden: Only admins can view users' })
   async findAllUsers(@CurrentUser() currentUser: { role: Role }): Promise<User[]> {
     return this.userService.findAllUsers(currentUser);
@@ -35,7 +33,7 @@ export class UserController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get(':id')
   @ApiOperation({ summary: 'Get user by ID (own account or admin)' })
-  @ApiResponse({ status: 200, description: 'User data', type: CreateUserDTO })
+  @ApiResponse({ status: 200, description: 'User data' })
   @ApiResponse({ status: 403, description: 'Access denied: can only view own data' })
   async findUserById(@Param('id', ParseIntPipe) id: number, @CurrentUser() currentUser: { userId: number; role: Role }): Promise<User> {
     return this.userService.findUserById(id, currentUser);
@@ -53,7 +51,7 @@ export class UserController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Delete(':id')
   @ApiOperation({ summary: 'Delete user' })
-  @ApiResponse({ status: 200, description: 'Deleted user data', type: CreateUserDTO })
+  @ApiResponse({ status: 200, description: 'Deleted user data' })
   @ApiResponse({ status: 403, description: 'Forbidden: can only delete own account' })
   async deleteUser(@Param('id', ParseIntPipe) id: number, @CurrentUser() currentUser: { userId: number; role: Role }): Promise<User> {
     return this.userService.deleteUser(id, currentUser);
