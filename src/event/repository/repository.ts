@@ -10,12 +10,12 @@ export class EventRepository implements IEventRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private readonly defaultInclude = {
+    category: true,
     organizer: {
       select: {
         organizer_id: true,
         name: true,
         logo_url: true,
-        user: { select: { user_id: true } },
       },
     },
     periods: {
@@ -29,7 +29,6 @@ export class EventRepository implements IEventRepository {
         },
       },
     },
-    category: true,
   };
 
   private async softDeleteEventPeriodAndTicketType(event_id: number, tx: Prisma.TransactionClient) {

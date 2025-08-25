@@ -6,12 +6,14 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
   app.enableCors({
-    origin: ["http://localhost:3000", "http://localhost:3002"],
+    origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: '*',
+    exposedHeaders: '*',
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Origin', 'cache-control'],
-    exposedHeaders: ['Content-Length', 'X-Total-Count'],
+    maxAge: 3600,
   });
 
   app.useGlobalInterceptors(new TransformInterceptor());
