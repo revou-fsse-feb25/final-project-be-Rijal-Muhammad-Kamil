@@ -55,8 +55,9 @@ export class EventController {
   })
   @ApiResponse({ status: 200, description: 'List of events successfully retrieved', type: [Event] })
   @ApiResponse({ status: 400, description: 'Bad Request - Invalid query parameter format (e.g., invalid date)' })
-  async findManyEventWithFilter(@Query('search') search?: string, @Query('category_id', ParseIntPipe) category_id?: number, @Query('location') location?: string, @Query('start_date') start_date?: string): Promise<Event[]> {
-    return this.eventService.findManyWithFilter(search, category_id, location, start_date);
+  async findManyEventWithFilter(@Query('search') search?: string, @Query('category_id') category_id?: string, @Query('location') location?: string, @Query('start_date') start_date?: string): Promise<Event[]> {
+    const catId = category_id ? parseInt(category_id) : undefined;
+    return this.eventService.findManyWithFilter(search, catId, location, start_date);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
