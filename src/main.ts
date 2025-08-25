@@ -10,7 +10,8 @@ async function bootstrap() {
     origin: ["http://localhost:3000", "http://localhost:3002"],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
-    allowedHeaders: 'Content-Type, Accept, Authorization',
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Origin'],
+    exposedHeaders: ['Content-Length', 'X-Total-Count'],
   });
 
   app.useGlobalInterceptors(new TransformInterceptor());
