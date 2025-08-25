@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, ConflictException } from '@nestjs/common';
 import { IEventOrganizerRepository } from './repository.interface';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { EventOrganizer } from '@prisma/client';
@@ -9,7 +9,7 @@ import { UpdateEventOrganizerDto } from '../dto/update-event-organizer.dto';
 export class EventOrganizerRepository implements IEventOrganizerRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async findActiveOrganizerOrThrow(organizer_id: number): Promise<EventOrganizer> {
+  private async findEventOrganizerActive(organizer_id: number): Promise<EventOrganizer> {
     const organizer = await this.prisma.eventOrganizer.findFirst({
       where: { organizer_id, deleted_at: null },
     });
@@ -21,30 +21,36 @@ export class EventOrganizerRepository implements IEventOrganizerRepository {
     return organizer;
   }
 
-  async createEventOrganizer(user_id: number, dto: CreateEventOrganizerDto): Promise<EventOrganizer> {
+  async createEventOrganizer(user_id: number, createEventOrganizerDto: CreateEventOrganizerDto): Promise<EventOrganizer> {
     try {
       return await this.prisma.eventOrganizer.create({
         data: {
-          ...dto,
+          ...createEventOrganizerDto,
           user: { connect: { user_id } },
         },
       });
     } catch (error) {
       if (error.code === 'P2002') {
-        throw new ConflictException('Event organizer name already exists');
+        const target = error.meta?.target ?? 'field';
+        throw new ConflictException(`Record already exists with the same ${target}`);
       }
       throw new InternalServerErrorException('Failed to create event organizer');
     }
   }
 
   async findEventOrganizerById(organizer_id: number): Promise<EventOrganizer> {
-    return this.findActiveOrganizerOrThrow(organizer_id);
+    return this.findEventOrganizerActive(organizer_id);
   }
 
   async findEventOrganizerByUserId(user_id: number): Promise<EventOrganizer | null> {
-    return this.prisma.eventOrganizer.findFirst({
+    const organizer = await this.prisma.eventOrganizer.findFirst({
       where: { user_id, deleted_at: null },
     });
+    if (!organizer) {
+      throw new NotFoundException(`Event organizer for user_id ${user_id} not found`);
+    }
+
+    return organizer;
   }
 
   async findAllEventOrganizer(): Promise<EventOrganizer[]> {
@@ -54,24 +60,25 @@ export class EventOrganizerRepository implements IEventOrganizerRepository {
     });
   }
 
-  async updateEventOrganizer(organizer_id: number, dto: UpdateEventOrganizerDto): Promise<EventOrganizer> {
-    await this.findActiveOrganizerOrThrow(organizer_id);
+  async updateEventOrganizer(organizer_id: number, updateEventOrganizerDto: UpdateEventOrganizerDto): Promise<EventOrganizer> {
+    await this.findEventOrganizerActive(organizer_id);
 
     try {
       return await this.prisma.eventOrganizer.update({
         where: { organizer_id },
-        data: dto,
+        data: updateEventOrganizerDto,
       });
     } catch (error) {
       if (error.code === 'P2002') {
-        throw new ConflictException('Event organizer name already exists');
+        const target = error.meta?.target ?? 'field';
+        throw new ConflictException(`Record already exists with the same ${target}`);
       }
       throw new InternalServerErrorException('Failed to update event organizer');
     }
   }
 
   async deleteEventOrganizer(organizer_id: number): Promise<EventOrganizer> {
-    await this.findActiveOrganizerOrThrow(organizer_id);
+    await this.findEventOrganizerActive(organizer_id);
 
     try {
       return await this.prisma.eventOrganizer.update({

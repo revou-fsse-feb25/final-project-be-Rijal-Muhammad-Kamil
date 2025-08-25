@@ -7,7 +7,7 @@ export interface AttendeeUser {
   role: Role;
   first_name: string;
   last_name: string;
-  date_of_birth: Date;
+  date_of_birth: string;
   gender: Gender;
   phone_number: string;
   status: UserStatus;
@@ -21,7 +21,7 @@ export interface OrganizerUser {
     role: Role;
     first_name: string;
     last_name: string;
-    date_of_birth: Date;
+    date_of_birth: string;
     gender: Gender;
     phone_number: string;
     status: UserStatus;
@@ -30,6 +30,6 @@ export interface OrganizerUser {
     organizer_id: number;
     user_id: number;
     name: string;
-    image_url: string | null;
+    logo_url: string | null;
   };
 }

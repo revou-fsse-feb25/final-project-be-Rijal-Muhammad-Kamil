@@ -1,7 +1,7 @@
-import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ROLES_KEY } from '../decorator/role.decorator';
 import { Role } from '@prisma/client';
+import { ROLES_KEY } from '../decorator/role.decorator';
 
 interface RequestWithUser extends Request {
   user?: { userId: number; email: string; role: Role };

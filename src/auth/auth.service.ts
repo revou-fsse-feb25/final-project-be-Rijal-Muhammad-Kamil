@@ -1,8 +1,9 @@
 import { Injectable, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
-import { LoginUserDTO } from './dto/create-auth.dto';
 import { UserRepository } from 'src/user/repository/repository';
+import { JwtService } from '@nestjs/jwt';
+import { LoginUserDTO } from './dto/create-auth.dto';
+import * as bcrypt from 'bcrypt';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -14,8 +15,11 @@ export class AuthService {
   async login(loginUserDTO: LoginUserDTO) {
     try {
       const user = await this.userRepository.findUserByEmail(loginUserDTO.email);
-      const isPasswordValid = await bcrypt.compare(loginUserDTO.password, user.password);
+      if (!user) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
 
+      const isPasswordValid = await bcrypt.compare(loginUserDTO.password, user.password);
       if (!isPasswordValid) {
         throw new UnauthorizedException('Invalid credentials');
       }
@@ -29,19 +33,14 @@ export class AuthService {
         user: {
           userId: user.user_id,
           email: user.email,
-          role: user.role,
+          role: user.role as Role,
         },
       };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-
-      if (error.name === 'NotFoundException') {
-        throw new UnauthorizedException('Invalid credentials');
-      }
-
-      throw new InternalServerErrorException(error.message);
+      throw new InternalServerErrorException('Something went wrong during login');
     }
   }
 }

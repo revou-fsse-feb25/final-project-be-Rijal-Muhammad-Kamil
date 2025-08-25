@@ -1,11 +1,11 @@
-import { Controller, UseGuards, Post, Body, Get, ParseIntPipe, Param, Patch, Delete } from '@nestjs/common';
+import { Controller, UseGuards, Post, Body, Get, NotFoundException, ParseIntPipe, Param, Patch, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../common/guard/jwt-auth.guard';
 import { EventOrganizerService } from './event-organizer.service';
+import { JwtAuthGuard } from '../common/guard/jwt-auth.guard';
 import { CreateEventOrganizerDto } from './dto/create-event-organizer.dto';
 import { CurrentUser } from '../common/decorator/current-user.decorator';
-import { Role, UserStatus } from '@prisma/client';
 import { RolesGuard } from '../common/guard/role.guard';
+import { Role, UserStatus } from '@prisma/client';
 import { UpdateEventOrganizerDto } from './dto/update-event-organizer.dto';
 
 @ApiTags('Event Organizer')
@@ -20,25 +20,19 @@ export class EventOrganizerController {
   @ApiResponse({ status: 400, description: 'Bad request - User already has an event organizer profile' })
   @ApiResponse({ status: 403, description: 'Forbidden - Only EVENT_ORGANIZER role can create profile' })
   createEventOrganizer(@Body() createEventOrganizerDto: CreateEventOrganizerDto, @CurrentUser() currentUser: { user_id: number; role: Role; status: UserStatus }) {
-    return this.eventOrganizerService.createEventOrganizer(currentUser, createEventOrganizerDto);
+    return this.eventOrganizerService.createEventOrganizer(createEventOrganizerDto, currentUser);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Get()
-  @ApiOperation({ summary: 'Get all event organizers (Admin only)' })
-  @ApiResponse({ status: 200, description: 'List of all event organizers' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Only admins can view all event organizers' })
-  findAllEventOrganizer(@CurrentUser() currentUser: { role: Role }) {
-    return this.eventOrganizerService.findAllEventOrganizer(currentUser);
-  }
-
   @Get('my-profile')
   @ApiOperation({ summary: 'Get current user event organizer profile' })
   @ApiResponse({ status: 200, description: 'Current user event organizer profile' })
   @ApiResponse({ status: 403, description: 'Forbidden - Can only view own profile unless admin' })
   @ApiResponse({ status: 404, description: 'Event organizer profile not found' })
-  findEventOrganizerProfile(@CurrentUser() currentUser: { user_id: number; role: Role }) {
-    return this.eventOrganizerService.findEventOrganizerByUserId(currentUser);
+  async findEventOrganizerByUserId(@CurrentUser() currentUser: { user_id: number; role: Role }) {
+    const eo = await this.eventOrganizerService.findEventOrganizerByUserId(currentUser);
+    if (!eo) throw new NotFoundException('Event organizer profile not found');
+    return eo;
   }
 
   @Get(':id')
@@ -50,12 +44,22 @@ export class EventOrganizerController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get()
+  @ApiOperation({ summary: 'Get all event organizers (Admin only)' })
+  @ApiResponse({ status: 200, description: 'List of all event organizers' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Only admins can view all event organizers' })
+  @ApiResponse({ status: 404, description: 'No event organizers found' })
+  findAllEventOrganizer(@CurrentUser() currentUser: { role: Role }) {
+    return this.eventOrganizerService.findAllEventOrganizer(currentUser);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Patch(':id')
   @ApiOperation({ summary: 'Update event organizer profile' })
   @ApiResponse({ status: 200, description: 'Event organizer profile updated successfully', type: UpdateEventOrganizerDto })
   @ApiResponse({ status: 403, description: 'Forbidden - Can only update own profile unless admin' })
   @ApiResponse({ status: 404, description: 'Event organizer not found' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateEventOrganizerDto: UpdateEventOrganizerDto, @CurrentUser() currentUser: { user_id: number; role: Role; status: UserStatus }) {
+  updateEventOrganizerProfile(@Param('id', ParseIntPipe) id: number, @Body() updateEventOrganizerDto: UpdateEventOrganizerDto, @CurrentUser() currentUser: { user_id: number; role: Role; status: UserStatus }) {
     return this.eventOrganizerService.updateEventOrganizerProfile(id, updateEventOrganizerDto, currentUser);
   }
 
@@ -65,7 +69,7 @@ export class EventOrganizerController {
   @ApiResponse({ status: 200, description: 'Event organizer profile deleted successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - Can only delete own profile unless admin' })
   @ApiResponse({ status: 404, description: 'Event organizer not found' })
-  remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() currentUser: { user_id: number; role: Role; status: UserStatus }) {
+  deleteEventOrganizerProfile(@Param('id', ParseIntPipe) id: number, @CurrentUser() currentUser: { user_id: number; role: Role; status: UserStatus }) {
     return this.eventOrganizerService.deleteEventOrganizerProfile(id, currentUser);
   }
 }

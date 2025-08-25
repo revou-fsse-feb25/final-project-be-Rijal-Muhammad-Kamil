@@ -1,6 +1,6 @@
 import { CreateEventOrganizerDto } from '../dto/create-event-organizer.dto';
-import { UpdateEventOrganizerDto } from '../dto/update-event-organizer.dto';
 import { EventOrganizer } from '@prisma/client';
+import { UpdateEventOrganizerDto } from '../dto/update-event-organizer.dto';
 
 export interface IEventOrganizerRepository {
   createEventOrganizer(user_id: number, createEventOrganizerDto: CreateEventOrganizerDto): Promise<EventOrganizer>;

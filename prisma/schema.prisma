@@ -17,13 +17,13 @@ datasource db {
 model User {
   user_id             Int                 @id @default(autoincrement())
   email               String              @unique @db.VarChar(51)
-  password            String              @db.VarChar(255)
-  role                Role                @default(ATTENDEE)
   first_name          String              @db.VarChar(51)
   last_name           String              @db.VarChar(51)
-  date_of_birth       DateTime            @db.Date
+  date_of_birth       String
   gender              Gender
   phone_number        String              @unique @db.VarChar(51)
+  password            String              @db.VarChar(255)
+  role                Role                @default(ATTENDEE)
   avatar_url          String?             @db.VarChar(255)
   status              UserStatus          @default(ACTIVE)
   created_at          DateTime            @default(now())
@@ -82,10 +82,10 @@ model EventPeriod {
   period_id            Int                @id @default(autoincrement())
   event_id             Int
   name                 String             @db.VarChar(127)
-  start_date           DateTime           @db.Date
-  end_date             DateTime           @db.Date
-  start_time           DateTime           @db.Time
-  end_time             DateTime           @db.Time
+  start_date           String
+  end_date             String
+  start_time           String
+  end_time             String
   status               PeriodStatus       @default(UPCOMING)
   created_at           DateTime           @default(now())
   updated_at           DateTime           @updatedAt

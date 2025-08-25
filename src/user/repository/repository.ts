@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, InternalServerErrorException } from '@nestjs/common';
 import { IUserRepository } from './repository.interface';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -14,7 +14,7 @@ export class UserRepository implements IUserRepository {
     return bcrypt.hash(password, 10);
   }
 
-  private async findActiveUserOrThrow(user_id: number): Promise<User> {
+  private async findUserActive(user_id: number): Promise<User> {
     const user = await this.prisma.user.findFirst({
       where: { user_id, deleted_at: null },
     });
@@ -34,7 +34,8 @@ export class UserRepository implements IUserRepository {
       });
     } catch (error) {
       if (error.code === 'P2002') {
-        throw new ConflictException('Email or phone number already exists');
+        const target = error.meta?.target ?? 'field';
+        throw new ConflictException(`Record already exists with the same ${target}`);
       }
       throw new InternalServerErrorException('Failed to create user');
     }
@@ -51,7 +52,7 @@ export class UserRepository implements IUserRepository {
   }
 
   async findUserById(user_id: number): Promise<User> {
-    return this.findActiveUserOrThrow(user_id);
+    return this.findUserActive(user_id);
   }
 
   async findAllUsers(): Promise<User[]> {
@@ -62,9 +63,9 @@ export class UserRepository implements IUserRepository {
   }
 
   async updateUser(user_id: number, updateUserDTO: UpdateUserDto): Promise<User> {
-    await this.findActiveUserOrThrow(user_id);
+    await this.findUserActive(user_id);
 
-    const data: Partial<UpdateUserDto> = { ...updateUserDTO };
+    const data = { ...updateUserDTO };
     if (data.password) {
       data.password = await this.hashPassword(data.password);
     }
@@ -76,14 +77,15 @@ export class UserRepository implements IUserRepository {
       });
     } catch (error) {
       if (error.code === 'P2002') {
-        throw new ConflictException('Email or phone number already exists');
+        const target = error.meta?.target ?? 'field';
+        throw new ConflictException(`Record already exists with the same ${target}`);
       }
       throw new InternalServerErrorException('Failed to update user');
     }
   }
 
   async deleteUser(user_id: number): Promise<User> {
-    await this.findActiveUserOrThrow(user_id);
+    await this.findUserActive(user_id);
 
     try {
       return await this.prisma.user.update({
@@ -91,6 +93,9 @@ export class UserRepository implements IUserRepository {
         data: { deleted_at: new Date() },
       });
     } catch (error) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException(`User with ID ${user_id} not found`);
+      }
       throw new InternalServerErrorException('Failed to delete user');
     }
   }

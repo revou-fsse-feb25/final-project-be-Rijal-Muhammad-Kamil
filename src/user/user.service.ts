@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { UserRepository } from './repository/repository';
+import { Role, UserStatus, User } from '@prisma/client';
 import { CreateUserDTO } from './dto/create-user.dto';
-import { Role, User, UserStatus } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
@@ -20,43 +20,68 @@ export class UserService {
     }
   }
 
-  private ensureOwnershipOrAdmin(userId: number, currentUser: { userId: number; role: Role }) {
-    if (currentUser.role !== Role.ADMIN && currentUser.userId !== userId) {
+  private ensureOwnershipOrAdmin(user_id: number, currentUser: { user_id: number; role: Role }) {
+    if (currentUser.role !== Role.ADMIN && currentUser.user_id !== user_id) {
       throw new ForbiddenException('Access denied: not your own data');
     }
   }
 
-  async createUser(createUserDTO: CreateUserDTO, currentUser: any): Promise<User> {
-    if (currentUser) {
+  private omitPassword(user: User): Omit<User, 'password'> {
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
+
+  async createUser(createUserDTO: CreateUserDTO, currentUser?: { user_id: number; role: Role }): Promise<Omit<User, 'password'>> {
+    if (currentUser?.user_id) {
       throw new ForbiddenException('Logged-in users cannot create new accounts');
     }
-    return this.userRepository.createUser(createUserDTO);
+    const user = await this.userRepository.createUser(createUserDTO);
+    return this.omitPassword(user);
   }
 
-  async findUserById(user_id: number, currentUser: { userId: number; role: Role }): Promise<User> {
+  async findUserById(user_id: number, currentUser: { user_id: number; role: Role }): Promise<Omit<User, 'password'>> {
     this.ensureOwnershipOrAdmin(user_id, currentUser);
-    return this.userRepository.findUserById(user_id);
+
+    const user = await this.userRepository.findUserById(user_id);
+
+    return this.omitPassword(user);
   }
 
-  async findAllUsers(currentUser: { role: Role }): Promise<User[]> {
+  async findAllUsers(currentUser: { role: Role }): Promise<Omit<User, 'password'>[]> {
     this.ensureAdmin(currentUser);
-    return this.userRepository.findAllUsers();
+
+    const users = await this.userRepository.findAllUsers();
+    return users.map((user) => this.omitPassword(user));
   }
 
-  async updateUser(user_id: number, updateUserDTO: UpdateUserDto, currentUser: { userId: number; role: Role; status: UserStatus }): Promise<User> {
+  async updateUser(user_id: number, updateUserDTO: UpdateUserDto, currentUser: { user_id: number; role: Role; status: UserStatus }, adminStatus?: UserStatus, adminRole?: Role): Promise<Omit<User, 'password'>> {
     this.ensureOwnershipOrAdmin(user_id, currentUser);
     this.ensureActive(currentUser);
 
-    const dataToUpdate: Partial<UpdateUserDto> = { ...updateUserDTO };
-    if (currentUser.role !== Role.ADMIN) {
+    const dataToUpdate: Partial<UpdateUserDto & { status?: UserStatus; role?: Role }> = { ...updateUserDTO };
+
+    if (currentUser.role === Role.ADMIN) {
+      dataToUpdate.status = adminStatus ?? dataToUpdate.status;
+      dataToUpdate.role = adminRole ?? dataToUpdate.role;
+
+      Object.keys(dataToUpdate).forEach((key) => {
+        if (!['status', 'role'].includes(key)) delete dataToUpdate[key];
+      });
+    } else {
+      delete dataToUpdate.status;
       delete dataToUpdate.role;
     }
 
-    return this.userRepository.updateUser(user_id, dataToUpdate);
+    const updatedUser = await this.userRepository.updateUser(user_id, dataToUpdate);
+
+    return this.omitPassword(updatedUser);
   }
 
-  async deleteUser(user_id: number, currentUser: { userId: number; role: Role }): Promise<User> {
+  async deleteUser(user_id: number, currentUser: { user_id: number; role: Role }): Promise<Omit<User, 'password'>> {
     this.ensureOwnershipOrAdmin(user_id, currentUser);
-    return this.userRepository.deleteUser(user_id);
+
+    const deletedUser = await this.userRepository.deleteUser(user_id);
+
+    return this.omitPassword(deletedUser);
   }
 }

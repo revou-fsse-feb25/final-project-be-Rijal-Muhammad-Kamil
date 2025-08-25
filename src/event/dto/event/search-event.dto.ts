@@ -1,6 +1,6 @@
-import { IsOptional, IsString, IsDateString, MaxLength, IsInt, Min, Matches } from 'class-validator';
+import { IsOptional, IsInt, IsString, MaxLength, Matches } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 
 export class SearchEventDto {
   @IsOptional()
@@ -28,9 +28,9 @@ export class SearchEventDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'start_date must be in YYYY-MM-DD format' })
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, { message: 'Filter event start_date must be in YYYY-MM-DD format and a valid date' })
   @ApiPropertyOptional({
-    description: 'Filter events by start date (format: YYYY-MM-DD)',
+    description: 'Filter events start date. Must be in YYYY-MM-DD format with a valid month (01-12) and day (01-31).',
     example: '2024-12-25',
     required: false,
     type: 'string',
@@ -49,31 +49,4 @@ export class SearchEventDto {
     type: 'string',
   })
   search?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @ApiPropertyOptional({
-    description: 'Current page number for pagination (min 1)',
-    example: 1,
-    minimum: 1,
-    default: 1,
-    required: false,
-    type: 'number',
-  })
-  page?: number = 1;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @ApiPropertyOptional({
-    description: 'Number of items per page (pagination limit, min 1)',
-    example: 10,
-    minimum: 1,
-    default: 10,
-    required: false,
-    type: 'number',
-  })
-  limit?: number = 10;
 }

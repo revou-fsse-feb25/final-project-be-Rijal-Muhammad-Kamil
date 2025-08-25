@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { EventOrganizerService } from './event-organizer.service';
-import { EventOrganizerController } from './event-organizer.controller';
-import { EventOrganizerRepository } from './repository/repository';
 import { PrismaModule } from '../prisma/prisma.module';
+import { EventOrganizerController } from './event-organizer.controller';
+import { EventOrganizerService } from './event-organizer.service';
+import { EventOrganizerRepository } from './repository/repository';
 
 @Module({
   imports: [PrismaModule],

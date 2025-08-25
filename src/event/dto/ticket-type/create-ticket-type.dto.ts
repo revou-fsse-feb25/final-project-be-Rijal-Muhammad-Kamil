@@ -51,7 +51,7 @@ export class CreateTicketTypeDTO {
   @ApiProperty({
     enum: Object.values(TicketStatus),
     example: TicketStatus.AVAILABLE,
-    description: 'Status of the ticket type',
+    description: 'Status of the ticket type ( e.g., AVAILABLE or SOLD_OUT)',
     type: 'string',
   })
   status: TicketStatus;

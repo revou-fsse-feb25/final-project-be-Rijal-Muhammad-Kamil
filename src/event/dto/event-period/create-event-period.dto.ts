@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsString, MaxLength, Matches, IsEnum } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
 import { PeriodStatus } from '@prisma/client';
 
 export class CreateEventPeriodDTO {
@@ -10,47 +10,48 @@ export class CreateEventPeriodDTO {
   @Transform(({ value }) => value.trim())
   @ApiProperty({
     example: 'Morning Session',
-    description: 'Name of the event period (max 127 characters)',
+    description: 'The name of the event period (maximum 127 characters)',
     maxLength: 127,
+    type: 'string',
   })
   name: string;
 
   @IsNotEmpty()
   @IsString()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'start_date must be in YYYY-MM-DD format' })
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, { message: 'Start date must be in the format YYYY-MM-DD and a valid calendar date' })
   @ApiProperty({
     example: '2025-08-20',
-    description: 'Start date of the period (YYYY-MM-DD)',
+    description: 'Start date of the period (format: YYYY-MM-DD, must be a valid calendar date)',
     type: String,
   })
   start_date: string;
 
   @IsNotEmpty()
   @IsString()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'end_date must be in YYYY-MM-DD format' })
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, { message: 'End date must be in the format YYYY-MM-DD and a valid calendar date' })
   @ApiProperty({
-    example: '2025-08-20',
-    description: 'End date of the period (YYYY-MM-DD)',
+    example: '2025-08-21',
+    description: 'End date of the period (format: YYYY-MM-DD, must be a valid calendar date)',
     type: String,
   })
   end_date: string;
 
   @IsNotEmpty()
   @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/, { message: 'start_time must be HH:mm or HH:mm:ss' })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/, { message: 'Start time must follow 24-hour format: HH:mm or HH:mm:ss' })
   @ApiProperty({
     example: '08:00:00',
-    description: 'Start time of the period (HH:mm:ss)',
+    description: 'Start time of the period (format: HH:mm or HH:mm:ss, 24-hour clock)',
     type: String,
   })
   start_time: string;
 
   @IsNotEmpty()
   @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/, { message: 'end_time must be HH:mm or HH:mm:ss' })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/, { message: 'End time must follow 24-hour format: HH:mm or HH:mm:ss' })
   @ApiProperty({
     example: '12:00:00',
-    description: 'End time of the period (HH:mm:ss)',
+    description: 'End time of the period (format: HH:mm or HH:mm:ss, 24-hour clock)',
     type: String,
   })
   end_time: string;
@@ -60,7 +61,8 @@ export class CreateEventPeriodDTO {
   @ApiProperty({
     enum: Object.values(PeriodStatus),
     example: PeriodStatus.UPCOMING,
-    description: 'Status of the period',
+    description: 'The status of the period (e.g., UPCOMING, ONGOING, COMPLETED)',
+    type: 'string',
   })
   status: PeriodStatus;
 }
