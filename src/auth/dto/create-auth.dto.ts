@@ -3,8 +3,8 @@ import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class LoginUserDTO {
-  @IsNotEmpty()
-  @IsEmail()
+  @IsEmail({}, { message: 'Email is not valid' })
+  @IsNotEmpty({ message: 'Email must not be empty' })
   @Transform(({ value }) => value?.trim())
   @ApiProperty({
     description: 'Email user yang terdaftar',
@@ -13,8 +13,8 @@ export class LoginUserDTO {
   })
   email: string;
 
-  @IsNotEmpty()
-  @IsString()
+  @IsString({ message: 'Password must be a string' })
+  @IsNotEmpty({ message: 'Password must not be empty' })
   @Transform(({ value }) => value?.trim())
   @ApiProperty({
     description: 'Password user',

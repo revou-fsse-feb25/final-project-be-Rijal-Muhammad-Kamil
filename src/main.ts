@@ -17,7 +17,11 @@ async function bootstrap() {
   });
 
   app.useGlobalInterceptors(new TransformInterceptor());
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      stopAtFirstError: true,
+    }),
+  );
 
   const config = new DocumentBuilder().setTitle('Event API').setDescription('The Event API description').setVersion('1.0').addTag('event').build();
   const document = SwaggerModule.createDocument(app, config);
