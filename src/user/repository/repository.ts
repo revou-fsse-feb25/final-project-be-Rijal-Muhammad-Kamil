@@ -41,15 +41,11 @@ export class UserRepository implements IUserRepository {
     }
   }
 
-  async findUserByEmail(email: string): Promise<User> {
-    const user = await this.prisma.user.findFirst({
-      where: { email, deleted_at: null },
-    });
-    if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
-    }
-    return user;
-  }
+async findUserByEmail(email: string): Promise<User | null> {
+  return this.prisma.user.findFirst({
+    where: { email, deleted_at: null },
+  });
+}
 
   async findUserById(user_id: number): Promise<User> {
     return this.findUserActive(user_id);
