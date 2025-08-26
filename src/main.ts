@@ -8,12 +8,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: '*',
-    exposedHeaders: '*',
+    origin: ['http://localhost:3001', 'http://localhost:3001', 'http://localhost:3002'],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Authorization, Cache-Control, X-Requested-With, Accept, Origin',
+    exposedHeaders: 'Content-Length, X-Kuma-Revision',
     credentials: true,
-    maxAge: 3600,
+    maxAge: 86400,
   });
 
   app.useGlobalInterceptors(new TransformInterceptor());
