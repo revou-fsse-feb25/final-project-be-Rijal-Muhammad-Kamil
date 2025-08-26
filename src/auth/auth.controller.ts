@@ -2,7 +2,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Controller, Post, HttpCode, HttpStatus, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginUserDTO } from './dto/create-auth.dto';
-import { Role } from '@prisma/client';
+import { Role, UserStatus } from '@prisma/client';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -22,6 +22,7 @@ export class AuthController {
       userId: number;
       email: string;
       role: Role;
+      status: UserStatus;
     };
   }> {
     return this.authService.login(loginUserDTO);

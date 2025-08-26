@@ -3,7 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { jwtPayloadInterface } from './jwt-payload.interface';
-import { Role } from '@prisma/client';
+import { Role, UserStatus } from '@prisma/client';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -20,11 +20,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate(jwtpayload: jwtPayloadInterface): { userId: number; email: string; role: Role } {
-    const { sub, email, role } = jwtpayload;
-    if (!sub || !email) {
+  validate(jwtpayload: jwtPayloadInterface): { userId: number; email: string; role: Role, status: UserStatus } {
+    const { sub, email, role, status } = jwtpayload;
+    if (!sub || !email || !role || !status) {
       throw new UnauthorizedException('Invalid token payload');
     }
-    return { userId: sub, email, role };
+    return { userId: sub, email, role, status };
   }
 }

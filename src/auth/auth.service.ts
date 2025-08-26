@@ -3,7 +3,7 @@ import { UserRepository } from 'src/user/repository/repository';
 import { JwtService } from '@nestjs/jwt';
 import { LoginUserDTO } from './dto/create-auth.dto';
 import * as bcrypt from 'bcrypt';
-import { Role } from '@prisma/client';
+import { Role, UserStatus } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -24,7 +24,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid credentials');
       }
 
-      const payload = { sub: user.user_id, email: user.email, role: user.role };
+      const payload = { sub: user.user_id, email: user.email, role: user.role, status: user.status };
       const accessToken = this.jwtService.sign(payload);
 
       return {
@@ -34,6 +34,7 @@ export class AuthService {
           userId: user.user_id,
           email: user.email,
           role: user.role as Role,
+          status: user.status as UserStatus,
         },
       };
     } catch (error) {

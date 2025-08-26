@@ -18,11 +18,11 @@ datasource db {
 model User {
   user_id             Int                 @id @default(autoincrement())
   email               String              @unique @db.VarChar(51)
+  phone_number        String              @unique @db.VarChar(51)
   first_name          String              @db.VarChar(51)
   last_name           String              @db.VarChar(51)
   date_of_birth       String
   gender              Gender
-  phone_number        String              @unique @db.VarChar(51)
   password            String              @db.VarChar(255)
   role                Role                @default(ATTENDEE)
   avatar_url          String?             @db.VarChar(255)
