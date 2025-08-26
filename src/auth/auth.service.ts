@@ -16,12 +16,12 @@ export class AuthService {
     const user = await this.userRepository.findUserByEmail(loginUserDTO.email);
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Email or password is incorrect');
     }
 
     const isPasswordValid = await bcrypt.compare(loginUserDTO.password, user.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Email or password is incorrect');
     }
 
     const payload = { sub: user.user_id, email: user.email, role: user.role, status: user.status };
