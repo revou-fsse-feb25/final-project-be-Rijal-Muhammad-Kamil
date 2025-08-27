@@ -4,7 +4,7 @@ import { Role } from '@prisma/client';
 import { ROLES_KEY } from '../decorator/role.decorator';
 
 interface RequestWithUser extends Request {
-  user?: { userId: number; email: string; role: Role };
+  user?: { user_id: number; email: string; role: Role };
 }
 
 @Injectable()
