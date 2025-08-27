@@ -16,10 +16,9 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async login(@Body() loginUserDTO: LoginUserDTO): Promise<{
-    message: string;
-    accessToken: string;
+    access_token: string;
     user: {
-      userId: number;
+      user_id: number;
       email: string;
       role: Role;
       status: UserStatus;
