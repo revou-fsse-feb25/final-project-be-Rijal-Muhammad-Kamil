@@ -31,20 +31,25 @@ export class UserService {
     return userWithoutPassword;
   }
 
-  async createUser(createUserDTO: CreateUserDTO, currentUser?: { user_id: number; role: Role }): Promise<Omit<User, 'password'>> {
+  async createUser(createUserDTO: CreateUserDTO, currentUser?: { user_id: number; role: Role }): Promise<User> {
     if (currentUser?.user_id) {
       throw new ForbiddenException('Logged-in users cannot create new accounts');
     }
+
     const user = await this.userRepository.createUser(createUserDTO);
-    return this.omitPassword(user);
+
+    return user;
   }
 
-  async findUserById(user_id: number, currentUser: { user_id: number; role: Role }): Promise<Omit<User, 'password'>> {
+  async findUserById(user_id: number, currentUser: { user_id: number; role: Role }): Promise<User | Omit<User, 'password'>> {
     this.ensureOwnershipOrAdmin(user_id, currentUser);
 
     const user = await this.userRepository.findUserById(user_id);
+    if (currentUser.role === Role.ADMIN) {
+      return this.omitPassword(user);
+    }
 
-    return this.omitPassword(user);
+    return user;
   }
 
   async findAllUsers(currentUser: { role: Role }): Promise<Omit<User, 'password'>[]> {
@@ -54,7 +59,7 @@ export class UserService {
     return users.map((user) => this.omitPassword(user));
   }
 
-  async updateUser(user_id: number, updateUserDTO: UpdateUserDto, currentUser: { user_id: number; role: Role; status: UserStatus }, adminStatus?: UserStatus, adminRole?: Role): Promise<Omit<User, 'password'>> {
+  async updateUser(user_id: number, updateUserDTO: UpdateUserDto, currentUser: { user_id: number; role: Role; status: UserStatus }, adminStatus?: UserStatus, adminRole?: Role): Promise<User | Omit<User, 'password'>> {
     this.ensureOwnershipOrAdmin(user_id, currentUser);
     this.ensureActive(currentUser);
 
@@ -74,14 +79,22 @@ export class UserService {
 
     const updatedUser = await this.userRepository.updateUser(user_id, dataToUpdate);
 
-    return this.omitPassword(updatedUser);
+    if (currentUser.role === Role.ADMIN) {
+      return this.omitPassword(updatedUser);
+    }
+
+    return updatedUser;
   }
 
-  async deleteUser(user_id: number, currentUser: { user_id: number; role: Role }): Promise<Omit<User, 'password'>> {
+  async deleteUser(user_id: number, currentUser: { user_id: number; role: Role }): Promise<User | Omit<User, 'password'>> {
     this.ensureOwnershipOrAdmin(user_id, currentUser);
 
     const deletedUser = await this.userRepository.deleteUser(user_id);
 
-    return this.omitPassword(deletedUser);
+    if (currentUser.role === Role.ADMIN) {
+      return this.omitPassword(deletedUser);
+    }
+
+    return deletedUser;
   }
 }
