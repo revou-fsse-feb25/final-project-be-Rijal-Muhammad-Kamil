@@ -1,6 +1,7 @@
 import { CreateEventDTO } from '../dto/event/create-event.dto';
-import { Event, Prisma } from '@prisma/client';
+import { Event, Prisma, TicketType } from '@prisma/client';
 import { UpdateEventDto } from '../dto/event/update-event.dto';
+import { CreateTicketTypeDTO } from '../dto/ticket-type/create-ticket-type.dto';
 
 export interface IEventRepository {
   createEvent(organizer_id: number, createEventDTO: CreateEventDTO): Promise<Event>;
@@ -14,4 +15,6 @@ export interface IEventRepository {
   findManyEventWithFilter(where: Prisma.EventWhereInput): Promise<Event[]>;
 
   findEventsByOrganizerId(organizer_id: number): Promise<Event[]>;
+
+  createTicketType(period_id: number, createTicketTypeDTO: CreateTicketTypeDTO): Promise<TicketType>;
 }

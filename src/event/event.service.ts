@@ -2,8 +2,9 @@ import { Injectable, ForbiddenException, BadRequestException } from '@nestjs/com
 import { EventOrganizerRepository } from 'src/event-organizer/repository/repository';
 import { EventRepository } from './repository/repository';
 import { CreateEventDTO } from './dto/event/create-event.dto';
-import { Role, UserStatus, Event, Prisma } from '@prisma/client';
+import { Role, UserStatus, Event, Prisma, TicketType } from '@prisma/client';
 import { UpdateEventDto } from './dto/event/update-event.dto';
+import { CreateTicketTypeDTO } from './dto/ticket-type/create-ticket-type.dto';
 
 @Injectable()
 export class EventService {
@@ -83,5 +84,29 @@ export class EventService {
     }
 
     return this.eventRepository.deleteEvent(event_id);
+  }
+
+  async createTicketType(period_id: number, createTicketTypeDTO: CreateTicketTypeDTO, currentUser: { user_id: number; role: Role; status: UserStatus }): Promise<TicketType> {
+    this.ensureActive(currentUser);
+
+    // Verify that the period belongs to an event owned by the current user (if not admin)
+    if (currentUser.role !== Role.ADMIN) {
+      const organizer = await this.ensureEventOrganizer(currentUser);
+
+      // Find the event that contains this period
+      const event = await this.eventRepository.findEventById(
+        (
+          await this.eventRepository.findManyEventWithFilter({
+            periods: { some: { period_id, deleted_at: null } },
+          })
+        )[0]?.event_id,
+      );
+
+      if (!event || event.organizer_id !== organizer.organizer_id) {
+        throw new ForbiddenException('You can only create ticket types for your own events');
+      }
+    }
+
+    return this.eventRepository.createTicketType(period_id, createTicketTypeDTO);
   }
 }

@@ -41,15 +41,12 @@ export class UserService {
     return user;
   }
 
-  async findUserById(user_id: number, currentUser: { user_id: number; role: Role }): Promise<User | Omit<User, 'password'>> {
+  async findUserById(user_id: number, currentUser: { user_id: number; role: Role }): Promise<Omit<User, 'password'>> {
     this.ensureOwnershipOrAdmin(user_id, currentUser);
 
     const user = await this.userRepository.findUserById(user_id);
-    if (currentUser.role === Role.ADMIN) {
-      return this.omitPassword(user);
-    }
 
-    return user;
+    return this.omitPassword(user);
   }
 
   async findAllUsers(currentUser: { role: Role }): Promise<Omit<User, 'password'>[]> {
@@ -59,7 +56,7 @@ export class UserService {
     return users.map((user) => this.omitPassword(user));
   }
 
-  async updateUser(user_id: number, updateUserDTO: UpdateUserDto, currentUser: { user_id: number; role: Role; status: UserStatus }, adminStatus?: UserStatus, adminRole?: Role): Promise<User | Omit<User, 'password'>> {
+  async updateUser(user_id: number, updateUserDTO: UpdateUserDto, currentUser: { user_id: number; role: Role; status: UserStatus }, adminStatus?: UserStatus, adminRole?: Role): Promise<Omit<User, 'password'>> {
     this.ensureOwnershipOrAdmin(user_id, currentUser);
     this.ensureActive(currentUser);
 
@@ -83,10 +80,10 @@ export class UserService {
       return this.omitPassword(updatedUser);
     }
 
-    return updatedUser;
+    return this.omitPassword(updatedUser);
   }
 
-  async deleteUser(user_id: number, currentUser: { user_id: number; role: Role }): Promise<User | Omit<User, 'password'>> {
+  async deleteUser(user_id: number, currentUser: { user_id: number; role: Role }): Promise<Omit<User, 'password'>> {
     this.ensureOwnershipOrAdmin(user_id, currentUser);
 
     const deletedUser = await this.userRepository.deleteUser(user_id);
@@ -95,6 +92,6 @@ export class UserService {
       return this.omitPassword(deletedUser);
     }
 
-    return deletedUser;
+    return this.omitPassword(deletedUser);
   }
 }
