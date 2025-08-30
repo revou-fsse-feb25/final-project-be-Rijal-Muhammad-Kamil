@@ -203,7 +203,7 @@ npm run start:debug
 
 Setelah aplikasi berjalan, akses dokumentasi Swagger di:
 ```
-http://localhost:3000/api
+http://localhost:3000/api-docs
 ```
 
 ### Endpoint Utama
@@ -327,6 +327,8 @@ DATABASE_URL=<production-database-url>
 JWT_SECRET=<strong-secret-key>
 PORT=3000
 ```
+## Deployment
+Aplikasi ini sudah dideploy di: [https://final-project-be-rijal-muhammad-kamil-production.up.railway.app/](https://final-project-be-rijal-muhammad-kamil-production.up.railway.app/)
 
 ## 🤝 Contributing
 
@@ -359,3 +361,5 @@ Jika ada pertanyaan atau issue, silakan buat issue di repository ini atau hubung
 ---
 
 **Built with ❤️ using NestJS and TypeScript**
+
+
